@@ -1,6 +1,5 @@
-<p align="center">
-  <img src="Flowmora.png" alt="Flowmora Browser" width="120" height="120">
-</p>
+# Flowmora Browser 
+<img width="200" height="300" alt="Flowmora" src="https://github.com/user-attachments/assets/ddfc3645-319a-4058-bfac-56a9c357c31c" />
 
 <h1 align="center">Flowmora Browser</h1>
 
