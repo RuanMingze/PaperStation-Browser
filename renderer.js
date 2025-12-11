@@ -5771,6 +5771,17 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    // Initialize Download Manager
+    try {
+        console.log('Creating DownloadManager...');
+        const dm = new DownloadManager();
+        window.downloadManager = dm;
+        console.log('✓ DownloadManager initialized');
+    } catch (e) {
+        console.error('✗ DownloadManager failed:', e);
+        console.error('Stack trace:', e.stack);
+    }
+
     // Setup additional features
     updateTimeDisplay();
     setInterval(updateTimeDisplay, 1000);
