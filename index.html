@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="zh-CN" data-theme="dark">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-  <title>Flowmora Browser</title>
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:">
+  <title>Papstation</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -22,11 +22,11 @@
               d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
           </svg>
         </div>
-        <span class="app-name">Flowmora</span>
+        <span class="app-name">Papstation</span>
       </div>
       <div class="title-bar-center"></div>
       <div class="title-bar-right">
-        <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+        <button class="theme-toggle" id="themeToggle" title="切换主题">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5" />
             <path
@@ -37,17 +37,17 @@
           </svg>
         </button>
         <div class="window-controls">
-          <button class="window-btn minimize" title="Minimize">
+          <button class="window-btn minimize" title="最小化">
             <svg viewBox="0 0 12 12">
               <rect y="5" width="12" height="2" rx="1" />
             </svg>
           </button>
-          <button class="window-btn maximize" title="Maximize">
+          <button class="window-btn maximize" title="最大化">
             <svg viewBox="0 0 12 12">
               <rect x="1" y="1" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" />
             </svg>
           </button>
-          <button class="window-btn close" title="Close">
+          <button class="window-btn close" title="关闭">
             <svg viewBox="0 0 12 12">
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
             </svg>
@@ -61,7 +61,7 @@
       <div class="tabs-container" id="tabsContainer">
         <!-- Tabs are dynamically created by renderer.js -->
       </div>
-      <button class="new-tab-btn" id="newTabBtn" title="New Tab">
+      <button class="new-tab-btn" id="newTabBtn" title="新建标签页">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
@@ -72,23 +72,23 @@
     <!-- Navigation Bar -->
     <div class="nav-bar">
       <div class="nav-controls">
-        <button class="nav-btn" id="backBtn" title="Go Back" disabled>
+        <button class="nav-btn" id="backBtn" title="后退" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
-        <button class="nav-btn" id="forwardBtn" title="Go Forward" disabled>
+        <button class="nav-btn" id="forwardBtn" title="前进" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </button>
-        <button class="nav-btn" id="reloadBtn" title="Reload">
+        <button class="nav-btn" id="reloadBtn" title="刷新">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M23 4v6h-6M1 20v-6h6" />
             <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
           </svg>
         </button>
-        <button class="nav-btn" id="homeBtn" title="Home">
+        <button class="nav-btn" id="homeBtn" title="主页">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
@@ -104,9 +104,9 @@
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <input type="text" class="url-input" id="urlInput" placeholder="Search or enter web address"
+          <input type="text" class="url-input" id="urlInput" placeholder="搜索或输入网址"
             spellcheck="false" autocomplete="off">
-          <button class="bookmark-btn" id="bookmarkBtn" title="Bookmark this page">
+          <button class="bookmark-btn" id="bookmarkBtn" title="添加书签">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon
                 points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -116,23 +116,23 @@
       </div>
 
       <div class="nav-actions">
-        <button class="knowledge-toggle-icon" id="knowledgeToggle" title="Toggle Knowledge Mode">
+        <button class="knowledge-toggle-icon" id="knowledgeToggle" title="切换知识模式">
           <span class="knowledge-icon">🧠</span>
         </button>
-        <button class="nav-btn" id="extensionsBtn" title="Extensions">
+        <button class="nav-btn" id="extensionsBtn" title="扩展">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path
               d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
           </svg>
         </button>
-        <button class="nav-btn" id="downloadsBtn" title="Downloads">
+        <button class="nav-btn" id="downloadsBtn" title="下载">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
         </button>
-        <button class="nav-btn menu-btn" id="menuBtn" title="Menu">
+        <button class="nav-btn menu-btn" id="menuBtn" title="菜单">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
@@ -147,7 +147,7 @@
       <div class="bookmarks-container" id="bookmarksContainer">
         <!-- Bookmarks are dynamically created by renderer.js -->
       </div>
-      <button class="bookmark-folder-btn" id="allBookmarksBtn" title="All Bookmarks">
+      <button class="bookmark-folder-btn" id="allBookmarksBtn" title="所有书签">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
         </svg>
@@ -166,15 +166,15 @@
                 d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
           </div>
-          <h1 class="ntp-title">Flowmora</h1>
-          <p class="ntp-tagline">Your gateway to a focused browsing experience</p>
+          <h1 class="ntp-title">Papstation</h1>
+          <p class="ntp-tagline">专注浏览体验的入口</p>
 
           <div class="search-box">
             <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8" />
               <path d="M21 21l-4.35-4.35" />
             </svg>
-            <input type="text" class="search-input" placeholder="Search the web..." id="searchInput">
+            <input type="text" class="search-input" placeholder="搜索网页..." id="searchInput">
           </div>
 
           <div class="quick-links">
@@ -225,13 +225,13 @@
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
               </div>
-              <span>Add shortcut</span>
+              <span>添加快捷方式</span>
             </a>
           </div>
         </div>
 
         <div class="ntp-footer">
-          <span>Flowmora Browser v1.0</span>
+          <span>Papstation v1.0</span>
           <span class="separator">•</span>
           <span id="timeDisplay"></span>
         </div>
@@ -245,7 +245,7 @@
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
             </svg>
-            <span>My Knowledge</span>
+            <span>我的知识库</span>
           </div>
           <div class="knowledge-panel-actions">
             <div class="knowledge-search-box">
@@ -253,17 +253,17 @@
                 <circle cx="11" cy="11" r="8" />
                 <path d="M21 21l-4.35-4.35" />
               </svg>
-              <input type="text" id="knowledgeSearch" placeholder="Search knowledge..." autocomplete="off">
+              <input type="text" id="knowledgeSearch" placeholder="搜索知识..." autocomplete="off">
             </div>
-            <button class="knowledge-export-btn" id="knowledgeExportBtn" title="Export My Knowledge Book">
+            <button class="knowledge-export-btn" id="knowledgeExportBtn" title="导出知识库">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                 <path d="M12 11v6M9 14l3 3 3-3" />
               </svg>
-              <span>📘 Export Book</span>
+              <span>📘 导出知识</span>
             </button>
-            <button class="knowledge-close-btn" id="knowledgePanelClose" title="Close">
+            <button class="knowledge-close-btn" id="knowledgePanelClose" title="关闭">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
@@ -276,7 +276,7 @@
           <div class="knowledge-sidebar" id="knowledgeSidebar">
             <div class="sidebar-section">
               <div class="sidebar-header">
-                <span>Subjects</span>
+                <span>主题</span>
                 <span class="sidebar-count" id="subjectCount">0</span>
               </div>
               <div class="sidebar-list" id="subjectList">
@@ -286,7 +286,7 @@
             <div class="sidebar-stats" id="sidebarStats">
               <div class="stat-item">
                 <span class="stat-value" id="totalEntries">0</span>
-                <span class="stat-label">Total Pages</span>
+                <span class="stat-label">总页数</span>
               </div>
             </div>
           </div>
@@ -299,15 +299,15 @@
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
               </svg>
-              <h3>No Knowledge Yet</h3>
-              <p>Enable Knowledge Mode and browse to start collecting insights.</p>
+              <h3>暂无知识</h3>
+              <p>启用知识模式并浏览以开始收集信息。</p>
             </div>
 
             <!-- Topics View -->
             <div class="knowledge-topics-view" id="topicsView" style="display: none;">
               <div class="topics-header">
                 <div class="breadcrumb" id="breadcrumb">
-                  <span class="breadcrumb-item active">All Subjects</span>
+                  <span class="breadcrumb-item active">所有主题</span>
                 </div>
               </div>
               <div class="topics-grid" id="topicsGrid">
@@ -319,9 +319,9 @@
             <div class="knowledge-notes-view" id="notesView" style="display: none;">
               <div class="notes-header">
                 <div class="breadcrumb" id="notesBreadcrumb">
-                  <span class="breadcrumb-item">Subject</span>
+                  <span class="breadcrumb-item">主题</span>
                   <span class="breadcrumb-separator">›</span>
-                  <span class="breadcrumb-item active">Topic</span>
+                  <span class="breadcrumb-item active">话题</span>
                 </div>
               </div>
               <div class="notes-list" id="notesList">
@@ -336,9 +336,9 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                   </svg>
-                  Back
+                  返回
                 </button>
-                <button class="delete-btn" id="detailDeleteBtn" title="Delete">
+                <button class="delete-btn" id="detailDeleteBtn" title="删除">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                   </svg>
@@ -356,7 +356,7 @@
       <div class="status-bar">
         <div class="status-left">
           <span class="status-indicator"></span>
-          <span class="status-text" id="statusText">Ready</span>
+          <span class="status-text" id="statusText">就绪</span>
         </div>
         <div class="status-right">
           <span class="zoom-level" id="zoomLevel">100%</span>

@@ -79,6 +79,15 @@ contextBridge.exposeInMainWorld('focusFlowAPI', {
     // ============================================
     incognito: {
         openWindow: () => ipcRenderer.invoke('open-incognito-window')
+    },
+
+    // ============================================
+    // Window Control API
+    // ============================================
+    window: {
+        minimize: () => ipcRenderer.invoke('window-minimize'),
+        maximize: () => ipcRenderer.invoke('window-maximize'),
+        close: () => ipcRenderer.invoke('window-close')
     }
 });
 

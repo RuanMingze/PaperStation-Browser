@@ -1,6 +1,6 @@
-# Contributing to Flowmora Browser
+# Contributing to Papstation Browser
 
-Thank you for your interest in contributing to Flowmora Browser! 🎉
+Thank you for your interest in contributing to Papstation Browser! 🎉
 
 ## 📋 Table of Contents
 
@@ -18,13 +18,13 @@ Be respectful, inclusive, and constructive. We're all here to build something gr
 
 ### 🐛 Report Bugs
 
-1. Check if the bug already exists in [Issues](https://github.com/piyushrajyadav/flowmora-browser/issues)
+1. Check if the bug already exists in [Issues](https://github.com/ruanmingze/papstation-browser/issues)
 2. If not, create a new issue with:
    - Clear title
    - Steps to reproduce
    - Expected vs actual behavior
    - Screenshots if applicable
-   - System info (OS, Flowmora version)
+   - System info (OS, Papstation version)
 
 ### 💡 Suggest Features
 
@@ -45,17 +45,17 @@ Open an issue with the `enhancement` label describing:
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/flowmora-browser.git
-cd flowmora-browser
+git clone https://github.com/YOUR_USERNAME/papstation-browser.git
+cd papstation-browser
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode (with DevTools)
-npm run dev
+pnpm run dev
 
 # Run in production mode
-npm start
+pnpm start
 ```
 
 ## Pull Request Process
@@ -104,6 +104,12 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `refactor:` Code restructuring
 - `test:` Adding tests
 - `chore:` Maintenance
+
+---
+
+### Based on Flowmora Browser
+
+Papstation Browser is based on Flowmora Browser, which is also licensed under the MIT License.
 
 ---
 

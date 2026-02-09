@@ -1,13 +1,17 @@
 # Changelog
 
-All notable changes to Flowmora Browser will be documented in this file.
+All notable changes to Papstation Browser will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2024-12-11
+## [1.0.0] - 2026-02-09
 
-### 🎉 Initial Release
+### 🎉 Initial Release of Papstation Browser
+
+#### Based on Flowmora Browser
+
+Papstation Browser is based on Flowmora Browser, which is licensed under the MIT License.
 
 #### Added
 - **Core Browser Features**
@@ -42,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Smooth theme transitions
 
 - **Settings Panel** ⚙️
-  - Search engine selection
+  - Search engine selection (including ChickRubGo)
   - Theme preference
   - Privacy controls
   - Download location
@@ -52,8 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pause/resume/cancel downloads
   - Open file or show in folder
 
+- **Papstation Exclusive Features**
+  - **ChickRubGo Search Engine** 🐔 - Integrated search engine
+  - **Full Chinese Localization** 🌍 - Complete Chinese language support
+  - **Enhanced Relative Path Handling** - Improved navigation for relative URLs
+  - **Updated Electron** - Built with Electron 40.1.0
+
 ### Technical
-- Built with Electron 33
+- Built with Electron 40.1.0
 - Windows installer (NSIS)
 - ASAR packaging enabled
 - Maximum compression

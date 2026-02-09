@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>302 Found - PapStation</title>
+    <link rel="icon" href="../Error.png" type="image/png">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aos/2.3.4/aos.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/aos/2.3.4/aos.js"></script>
+    <style>
+        body {
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            background-image: url('https://luckycola.com.cn/public/imgs/luckycola_Imghub_forever_cjIr5FKD17701864981356073.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: -1;
+        }
+        
+        .dark-mode {
+            background-color: #121212;
+            color: #e5e7eb;
+        }
+        
+        .dark-mode::before {
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .error-code {
+            font-size: 120px;
+            font-weight: 700;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #4F46E5, #EC4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        .error-image {
+            max-width: 300px;
+            margin: 30px 0;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .error-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin: 20px 0;
+            color: var(--text-dark, #333);
+        }
+        
+        .dark-mode .error-title {
+            color: var(--white, #ffffff);
+        }
+        
+        .error-name {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin: 10px 0;
+            color: var(--primary, #4F46E5);
+        }
+        
+        .error-description {
+            font-size: 1.1rem;
+            margin: 15px 0;
+            max-width: 700px;
+            line-height: 1.6;
+            color: var(--text-light, #666);
+        }
+        
+        .dark-mode .error-description {
+            color: var(--text-light, #999);
+        }
+        
+        .error-examples {
+            font-size: 1rem;
+            margin: 20px 0 40px;
+            max-width: 700px;
+            line-height: 1.6;
+            color: var(--text-light, #666);
+            background: rgba(255, 255, 255, 0.5);
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .dark-mode .error-examples {
+            color: var(--text-light, #999);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .error-examples h4 {
+            margin: 0 0 15px 0;
+            color: var(--primary, #4F46E5);
+        }
+        
+        .error-examples ul {
+            text-align: left;
+            padding-left: 20px;
+            margin: 0;
+        }
+        
+        .error-examples li {
+            margin: 8px 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 10px;
+            border-radius: 28px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: var(--primary, #4F46E5);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark, #4338CA);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--primary, #4F46E5);
+            border: 2px solid var(--primary, #4F46E5);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--primary, #4F46E5);
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .dark-mode .btn-secondary {
+            color: var(--primary-light, #6366F1);
+            border-color: var(--primary-light, #6366F1);
+        }
+        
+        .dark-mode .btn-secondary:hover {
+            background: var(--primary-light, #6366F1);
+            color: white;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-light, #666);
+            font-size: 0.9rem;
+        }
+        
+        .dark-mode .footer {
+            color: var(--text-light, #999);
+        }
+        
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 80px;
+            }
+            
+            .error-title {
+                font-size: 2rem;
+            }
+            
+            .error-name {
+                font-size: 1.2rem;
+            }
+            
+            .error-description {
+                font-size: 1rem;
+            }
+            
+            .error-examples {
+                font-size: 0.9rem;
+            }
+            
+            .error-image {
+                max-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-code">302</div>
+        <img src="../Error.png" alt="302错误" class="error-image" data-aos="fade-up" data-aos-duration="1000">
+        <h1 class="error-title" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">Found</h1>
+        <h2 class="error-name" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300">临时重定向</h2>
+        <p class="error-description" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
+            资源临时迁移，后续仍应使用原 URL 请求
+        </p>
+        <div class="error-examples" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="500">
+            <h4>可能原因：</h4>
+            <ul>
+                <li>临时维护、临时域名切换、接口临时分流</li>
+                <li>历史规范歧义：现代浏览器默认保持原请求方法跳转</li>
+            </ul>
+        </div>
+        <div class="btn-group" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="600">
+            <a href="https://ruanmingze.github.io/ChickRubGo/" class="btn btn-primary">返回首页</a>
+            
+        </div>
+    </div>
+    <div class="footer">
+        <p>© 2026 PapStation by Ruanm, Inc. 探索未知，一键直达</p>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            AOS.init({
+                duration: 800,
+                easing: 'ease-in-out',
+                once: true,
+                offset: 120
+            });
+        });
+        
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.body.classList.add('dark-mode');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+            if (e.matches) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        });
+    </script>
+</body>
+</html>

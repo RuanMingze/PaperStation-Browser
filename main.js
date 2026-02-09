@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, session, shell } = require('electron');
 const path = require('path');
 
+if (require('electron-squirrel-startup')) app.quit();
+
 // Determine if we're in development mode
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -13,8 +15,10 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        title: 'Flowmora Browser',
-        icon: path.join(__dirname, 'Flowmora.png'),
+        title: 'Papstation',
+        icon: path.join(__dirname, 'assets/icon.png'),
+        frame: false,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,      // Security: isolate context
@@ -24,7 +28,7 @@ function createWindow() {
             webSecurity: true,           // Enforce same-origin policy
         },
         backgroundColor: '#0a0a0f',    // Dark background for modern look
-        show: false,                   // Don't show until ready
+        show: false,                     // Don't show until ready
     });
 
     // Show window when ready to prevent visual flash
@@ -35,10 +39,8 @@ function createWindow() {
     // Load the index.html of the app
     mainWindow.loadFile('index.html');
 
-    // Open DevTools only in development mode
-    if (isDev) {
-        mainWindow.webContents.openDevTools();
-    }
+    // Open DevTools
+     mainWindow.webContents.openDevTools();
 
     // Handle window closed
     mainWindow.on('closed', () => {
@@ -199,6 +201,37 @@ ipcMain.handle('clear-completed-downloads', () => {
 });
 
 // ============================================
+// Window Control IPC Handlers
+// ============================================
+ipcMain.handle('window-minimize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.minimize();
+        return true;
+    }
+    return false;
+});
+
+ipcMain.handle('window-maximize', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+        } else {
+            mainWindow.maximize();
+        }
+        return true;
+    }
+    return false;
+});
+
+ipcMain.handle('window-close', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.close();
+        return true;
+    }
+    return false;
+});
+
+// ============================================
 // Incognito Mode
 // ============================================
 let incognitoCounter = 0;
@@ -210,8 +243,10 @@ function createIncognitoWindow() {
     const incognitoWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        title: 'Flowmora Browser - Incognito',
-        icon: path.join(__dirname, 'Flowmora.png'),
+        title: 'Papstation - 隐私模式',
+        icon: path.join(__dirname, 'assets/icon.png'),
+        frame: false,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,

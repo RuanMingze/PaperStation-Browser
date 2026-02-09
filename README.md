@@ -1,10 +1,9 @@
-# Flowmora Browser 
-<img width="200" height="300" alt="Flowmora" src="https://github.com/user-attachments/assets/ddfc3645-319a-4058-bfac-56a9c357c31c" />
+# Papstation Browser
 
-<h1 align="center">Flowmora Browser</h1>
+<h1 align="center">Papstation Browser</h1>
 
 <p align="center">
-  <strong>A Modern, Secure, and Feature-Rich Desktop Browser</strong>
+  <strong>A Modern, Secure, and Knowledge-Focused Desktop Browser</strong>
 </p>
 
 <p align="center">
@@ -18,18 +17,18 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows-blue?style=flat-square&logo=windows" alt="Platform">
-  <img src="https://img.shields.io/badge/Electron-33.x-47848F?style=flat-square&logo=electron" alt="Electron">
+  <img src="https://img.shields.io/badge/Electron-40.1.0-47848F?style=flat-square&logo=electron" alt="Electron">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/Version-1.0.0-orange?style=flat-square" alt="Version">
 </p>
 
 ---
 
-## 🌟 What Makes Flowmora Different?
+## 🌟 What Makes Papstation Different?
 
-Flowmora isn't just another browser. It's a **knowledge-focused browsing experience** designed for researchers, students, and anyone who wants to learn efficiently while browsing.
+Papstation is a knowledge-focused browsing experience designed for researchers, students, and anyone who wants to learn efficiently while browsing. It is based on Flowmora Browser and inherits its core features while adding additional enhancements.
 
-| Feature | Chrome/Edge | Flowmora |
+| Feature | Chrome/Edge | Papstation |
 |---------|:-----------:|:--------:|
 | 🧠 Knowledge Mode | ❌ | ✅ |
 | 📚 Auto-save Learning Content | ❌ | ✅ |
@@ -39,6 +38,8 @@ Flowmora isn't just another browser. It's a **knowledge-focused browsing experie
 | 🔒 Privacy-First Design | ⚠️ | ✅ |
 | 🚀 Lightweight & Fast | ⚠️ | ✅ |
 | 🎨 Modern UI/UX | ✅ | ✅ |
+| 🐔 ChickRubGo Search | ❌ | ✅ |
+| 🌍 Chinese Localization | ❌ | ✅ |
 
 ---
 
@@ -68,6 +69,7 @@ Export all your collected knowledge as a beautifully formatted PDF or HTML book.
 - Tab management
 - Bookmarks bar
 - Quick shortcuts
+- Full Chinese language support
 
 ### ⚡ Performance
 - Fast startup
@@ -75,20 +77,23 @@ Export all your collected knowledge as a beautifully formatted PDF or HTML book.
 - Hardware acceleration
 - Efficient tab management
 
+### 🐔 ChickRubGo Search Engine
+Integrated with ChickRubGo search engine for enhanced browsing experience.
+
 ---
 
 ## 📥 Installation
 
 ### Windows (Recommended)
 
-1. **Download** the latest installer from [Releases](https://github.com/piyushrajyadav/flowmora-browser/releases)
-2. **Run** `Flowmora Browser Setup.exe`
+1. **Download** the latest installer from [Releases](https://github.com/ruanmingze/papstation-browser/releases)
+2. **Run** `Papstation Browser Setup.exe`
 3. **Follow** the installation wizard
 4. **Launch** from Desktop or Start Menu
 
 ### Portable Version
 
-Download `Flowmora-Browser-win-x64.zip`, extract, and run `Flowmora Browser.exe`
+Download `Papstation-Browser-win-x64.zip`, extract, and run `Papstation Browser.exe`
 
 ---
 
@@ -114,27 +119,27 @@ Download `Flowmora-Browser-win-x64.zip`, extract, and run `Flowmora Browser.exe`
 ### Prerequisites
 
 - **Node.js** 18+ 
-- **npm** 9+
+- **pnpm** 
 - **Git**
 
 ### Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/piyushrajyadav/flowmora-browser.git
-cd flowmora-browser
+git clone https://github.com/ruanmingze/papstation-browser.git
+cd papstation-browser
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run in development mode
-npm run dev
+pnpm run dev
 ```
 
 ### Project Structure
 
 ```
-flowmora-browser/
+papstation-browser/
 ├── main.js           # Electron main process
 ├── preload.js        # Preload scripts (IPC bridge)
 ├── renderer.js       # Renderer process logic
@@ -150,7 +155,7 @@ flowmora-browser/
 
 | Technology | Purpose |
 |------------|---------|
-| **Electron 33** | Cross-platform desktop app |
+| **Electron 40.1.0** | Cross-platform desktop app |
 | **Chromium** | Web rendering engine |
 | **IndexedDB** | Local knowledge storage |
 | **electron-builder** | App packaging & distribution |
@@ -163,24 +168,24 @@ flowmora-browser/
 
 ```bash
 # Create installer
-npm run build
+pnpm run build
 
-# Output: dist/Flowmora Browser Setup.exe
+# Output: dist/Papstation Browser Setup.exe
 ```
 
 ### Build Options
 
 | Command | Output |
 |---------|--------|
-| `npm run build` | Windows NSIS installer |
-| `npm run build:dir` | Unpacked directory (testing) |
-| `npm run dist` | Build without publishing |
+| `pnpm run build` | Windows NSIS installer |
+| `pnpm run build:dir` | Unpacked directory (testing) |
+| `pnpm run dist` | Build without publishing |
 
 ### Build Configuration
 
 The build is configured in `package.json` under the `"build"` section:
 
-- **App ID**: `com.flowmora.browser`
+- **App ID**: `com.papstation.browser`
 - **Target**: Windows x64 NSIS
 - **Compression**: Maximum
 - **ASAR**: Enabled
@@ -193,7 +198,7 @@ The build is configured in `package.json` under the `"build"` section:
 
 | Setting | Description |
 |---------|-------------|
-| Search Engine | Google, Bing, DuckDuckGo, Yahoo, Ecosia |
+| Search Engine | Google, Bing, DuckDuckGo, Yahoo, Ecosia, ChickRubGo |
 | Theme | Dark / Light |
 | Knowledge Mode | Enable/Disable auto-capture |
 | Privacy | Clear data, Incognito mode |
@@ -216,19 +221,22 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+### Based on Flowmora Browser
+
+Papstation Browser is based on Flowmora Browser, which is also licensed under the MIT License.
+
 ---
 
 ## 👤 Author
 
-**Piyush Yadav**
-
-- GitHub: [@piyushrajyadav](https://github.com/piyushrajyadav)
+**Ruan Mingze**
 
 ---
 
 ## 🙏 Acknowledgments
 
 - Built with [Electron](https://www.electronjs.org/)
+- Based on [Flowmora Browser](https://github.com/piyushrajyadav/flowmora-browser)
 - Icons and design inspiration from modern browsers
 - Community feedback and contributions
 

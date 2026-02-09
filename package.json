@@ -1,7 +1,7 @@
 {
-  "name": "flowmora-browser",
+  "name": "papstation-browser",
   "version": "1.0.0",
-  "description": "A secure Chromium-based desktop browser built with Electron",
+  "description": "访问互联网",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -12,9 +12,9 @@
     "pack": "electron-builder --dir"
   },
   "build": {
-    "appId": "com.flowmora.browser",
-    "productName": "Flowmora Browser",
-    "copyright": "Copyright © 2024 Piyush Yadav",
+    "appId": "com.papstation.browser",
+    "productName": "Papstation",
+    "copyright": "Copyright © 2026 Ruanm",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -49,7 +49,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Flowmora Browser"
+      "shortcutName": "Papstation"
     },
     "asar": true,
     "compression": "maximum"
@@ -58,20 +58,15 @@
     "browser",
     "electron",
     "chromium",
-    "flowmora"
+    "papstation"
   ],
-  "author": "Piyush Yadav <piyushrajyadav@github.com>",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/piyushrajyadav/flowmora-browser.git"
-  },
-  "homepage": "https://github.com/piyushrajyadav/flowmora-browser#readme",
-  "bugs": {
-    "url": "https://github.com/piyushrajyadav/flowmora-browser/issues"
-  },
+  "author": "RuanMingze",
   "license": "MIT",
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.0"
+  },
   "devDependencies": {
-    "electron": "^33.2.0",
+    "electron": "^40.1.0",
     "electron-builder": "^25.1.8"
   }
 }

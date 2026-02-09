@@ -38,25 +38,26 @@ const CONFIG = {
                 yahoo: 'https://www.yahoo.com',
                 ecosia: 'https://www.ecosia.org'
             };
-            return engines[settings.searchEngine] || 'https://www.google.com';
+            return engines[settings.searchEngine] || 'https://ruanmingze.github.io/ChickRubGo/';
         }
-        return 'https://www.google.com';
+        return 'https://ruanmingze.github.io/ChickRubGo/';
     },
     get searchEngine() {
         const settings = loadSavedSettings();
         if (settings && settings.searchEngine) {
             const engines = {
                 google: 'https://www.google.com/search?q=',
-                bing: 'https://www.bing.com/search?q=',
+                bing: 'https://cn.bing.com/search?q=',
                 duckduckgo: 'https://duckduckgo.com/?q=',
                 yahoo: 'https://search.yahoo.com/search?p=',
-                ecosia: 'https://www.ecosia.org/search?q='
+                ecosia: 'https://www.ecosia.org/search?q=',
+                chickrubgo: 'https://ruanmingze.github.io/ChickRubGo/search?q='
             };
-            return engines[settings.searchEngine] || 'https://www.google.com/search?q=';
+            return engines[settings.searchEngine] || 'https://ruanmingze.github.io/ChickRubGo/search?q=';
         }
-        return 'https://www.google.com/search?q=';
+        return 'https://ruanmingze.github.io/ChickRubGo/search?q=';
     },
-    defaultTitle: IS_INCOGNITO ? 'Incognito Tab' : 'New Tab',
+    defaultTitle: IS_INCOGNITO ? '隐私标签页' : '新标签页',
     // Incognito uses ephemeral partition (no persist: prefix = no storage)
     partition: IS_INCOGNITO ? `incognito-${Date.now()}` : 'persist:focusflow',
     newTabPage: 'about:blank',
@@ -106,7 +107,7 @@ class TabManager {
     // Tab Creation & Management
     // ============================================
 
-    createTab(url = CONFIG.newTabPage) {
+    createTab(url = CONFIG.homePage) {
         const tabId = ++this.tabCounter;
 
         // Create tab element
@@ -187,7 +188,8 @@ class TabManager {
         webview.className = 'browser-webview';
         webview.setAttribute('partition', CONFIG.partition);
         webview.setAttribute('allowpopups', 'true');
-        webview.setAttribute('webpreferences', 'contextIsolation=yes');
+        webview.setAttribute('webpreferences', 'contextIsolation=yes,nodeIntegration=no');
+        webview.setAttribute('plugins', 'false');
 
         // Set initial URL
         if (url && url !== 'about:blank') {
@@ -224,10 +226,32 @@ class TabManager {
             }
         });
 
+        // HTTP response details (handle status codes)
+        webview.addEventListener('did-get-response-details', (e) => {
+            if (e.statusCode >= 300 && e.statusCode < 600) {
+                // Handle error status codes
+                const errorPagePath = `errors/${e.statusCode}.html`;
+                // Check if error page exists
+                fetch(errorPagePath)
+                    .then(response => {
+                        if (response.ok) {
+                            // Show error page
+                            webview.src = errorPagePath;
+                        } else {
+                            // If no specific error page, show generic error
+                            console.warn(`No error page for status code ${e.statusCode}`);
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error checking error page:', err);
+                    });
+            }
+        });
+
         // Loading started
         webview.addEventListener('did-start-loading', () => {
             if (this.activeTabId === tabId) {
-                this.setStatus('Loading...');
+                this.setStatus('加载中...');
                 this.reloadBtn.classList.add('reloading');
             }
         });
@@ -235,7 +259,7 @@ class TabManager {
         // Loading finished
         webview.addEventListener('did-stop-loading', () => {
             if (this.activeTabId === tabId) {
-                this.setStatus('Ready');
+                this.setStatus('就绪');
                 this.reloadBtn.classList.remove('reloading');
                 this.updateNavigationState();
             }
@@ -246,15 +270,65 @@ class TabManager {
 
         // Loading failed
         webview.addEventListener('did-fail-load', (e) => {
-            if (e.errorCode !== -3 && this.activeTabId === tabId) { // -3 is aborted
-                this.setStatus(`Error: ${e.errorDescription}`);
+            if (e.errorCode !== -3) { // -3 is aborted
+                if (this.activeTabId === tabId) {
+                    this.setStatus(`错误：${e.errorDescription}`);
+                }
+                
+                // Map error descriptions to HTTP status codes
+                const errorStatusMap = {
+                    'ERR_NAME_NOT_RESOLVED': 404,      // DNS 解析失败
+                    'ERR_CONNECTION_REFUSED': 502,     // 连接被拒绝
+                    'ERR_TIMED_OUT': 504,              // 连接超时
+                    'ERR_INTERNET_DISCONNECTED': 502,  // 网络断开
+                    'ERR_HTTP_RESPONSE_CODE_FAILURE': e.statusCode || 500, // 使用实际状态码
+                    'ERR_CONNECTION_RESET': 502,       // 连接重置
+                    'ERR_NETWORK_ACCESS_DENIED': 403,   // 网络访问被拒绝
+                    'ERR_SSL_PROTOCOL_ERROR': 403,      // SSL 协议错误
+                    'ERR_CERT_AUTHORITY_INVALID': 403,  // 证书无效
+                    'ERR_CERT_COMMON_NAME_INVALID': 403, // 证书名称无效
+                    'ERR_CERT_DATE_INVALID': 403        // 证书日期无效
+                };
+                
+                // Get status code from map or default to 500
+                const statusCode = errorStatusMap[e.errorDescription] || 500;
+                
+                // Show error page
+                const errorPagePath = `errors/${statusCode}.html`;
+                fetch(errorPagePath)
+                    .then(response => {
+                        if (response.ok) {
+                            webview.src = errorPagePath;
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error loading error page:', err);
+                    });
             }
         });
 
         // New window requested (open in new tab)
         webview.addEventListener('new-window', (e) => {
             e.preventDefault();
-            this.createTab(e.url);
+            const url = e.url;
+            // Handle relative paths
+            if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://') && !url.startsWith('about:')) {
+                // Get current tab's URL to resolve relative path
+                const currentTab = this.tabs.get(tabId);
+                if (currentTab && currentTab.url) {
+                    try {
+                        const resolvedUrl = new URL(url, currentTab.url).href;
+                        this.createTab(resolvedUrl);
+                    } catch (err) {
+                        console.error('Error resolving relative URL:', err);
+                        this.createTab(url);
+                    }
+                } else {
+                    this.createTab(url);
+                }
+            } else {
+                this.createTab(url);
+            }
         });
 
         // DOM ready - get initial title if not set
@@ -266,6 +340,92 @@ class TabManager {
                         if (title) this.updateTabTitle(tabId, title);
                     })
                     .catch(() => { });
+            }
+            
+            // Handle target="_blank" links to open in new tabs
+            webview.executeJavaScript(`
+                // Override window.open to handle target="_blank"
+                const originalOpen = window.open;
+                window.open = function(url, target, features) {
+                    if (target === '_blank' || !target) {
+                        console.log('OPEN_IN_NEW_TAB:' + url);
+                        return {
+                            focus: function() {},
+                            close: function() {}
+                        };
+                    }
+                    return originalOpen.apply(this, arguments);
+                };
+                
+                // Add click listener to all links with target="_blank"
+                document.addEventListener('click', (e) => {
+                    const link = e.target.closest('a');
+                    if (link && link.target === '_blank' && link.href) {
+                        e.preventDefault();
+                        // Send message to open in new tab
+                        console.log('OPEN_IN_NEW_TAB:' + link.href);
+                    }
+                });
+                
+                // Also handle links added dynamically
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                if (node.tagName === 'A' && node.target === '_blank' && node.href) {
+                                    node.addEventListener('click', (e) => {
+                                        e.preventDefault();
+                                        console.log('OPEN_IN_NEW_TAB:' + node.href);
+                                    });
+                                }
+                                // Check child nodes
+                                node.querySelectorAll('a[target="_blank"]').forEach((link) => {
+                                    link.addEventListener('click', (e) => {
+                                        e.preventDefault();
+                                        window.postMessage({ 
+                                            type: 'OPEN_IN_NEW_TAB', 
+                                            url: link.href 
+                                        });
+                                    });
+                                });
+                            }
+                        });
+                    });
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            `).catch(err => {
+                console.error('Error setting up target="_blank" handler:', err);
+            });
+        });
+
+        // Listen for messages from webview (for opening new tabs)
+        webview.addEventListener('console-message', (e) => {
+            if (e.message && e.message.startsWith('OPEN_IN_NEW_TAB:')) {
+                const url = e.message.replace('OPEN_IN_NEW_TAB:', '').trim();
+                if (url) {
+                    // Handle relative paths
+                    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://') && !url.startsWith('about:')) {
+                        // Get current tab's URL to resolve relative path
+                        const currentTab = this.tabs.get(tabId);
+                        if (currentTab && currentTab.url) {
+                            try {
+                                const resolvedUrl = new URL(url, currentTab.url).href;
+                                this.createTab(resolvedUrl);
+                            } catch (err) {
+                                console.error('Error resolving relative URL:', err);
+                                this.createTab(url);
+                            }
+                        } else {
+                            this.createTab(url);
+                        }
+                    } else {
+                        this.createTab(url);
+                    }
+                }
             }
         });
     }
@@ -352,7 +512,29 @@ class TabManager {
     // ============================================
 
     navigate(input) {
-        const url = this.normalizeUrl(input);
+        let url = input.trim();
+        
+        // Handle relative paths
+        if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://') && !url.startsWith('about:')) {
+            // Get current tab's URL to resolve relative path
+            const currentTab = this.tabs.get(this.activeTabId);
+            if (currentTab && currentTab.url) {
+                try {
+                    url = new URL(url, currentTab.url).href;
+                } catch (err) {
+                    console.error('Error resolving relative URL:', err);
+                    // If error, use normalizeUrl as fallback
+                    url = this.normalizeUrl(input);
+                }
+            } else {
+                // If no current tab, use normalizeUrl
+                url = this.normalizeUrl(input);
+            }
+        } else {
+            // For absolute URLs or other cases, use normalizeUrl
+            url = this.normalizeUrl(input);
+        }
+        
         const tab = this.tabs.get(this.activeTabId);
 
         if (tab && tab.webview) {
@@ -1447,6 +1629,13 @@ class SummaryModalUI {
                     <!-- Content populated dynamically -->
                 </div>
             </div>
+            <div class="main-menu-item" id="menuDevTools">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                开发者工具
+            </div>
         `;
 
         document.body.appendChild(this.modalOverlay);
@@ -2381,7 +2570,7 @@ class KnowledgePanelManager {
     async deleteCurrentEntry() {
         if (!this.currentEntry || !window.knowledgeDB) return;
 
-        if (!confirm('Delete this knowledge entry?')) return;
+        if (!confirm('确定删除此知识条目？')) return;
 
         try {
             await window.knowledgeDB.deleteKnowledgeEntry(this.currentEntry.id);
@@ -2555,7 +2744,7 @@ class KnowledgeBookExporter {
 
     async exportBook() {
         if (!window.knowledgeDB) {
-            alert('Knowledge database not available');
+            alert('知识数据库不可用');
             return;
         }
 
@@ -2570,7 +2759,7 @@ class KnowledgeBookExporter {
             const entries = await window.knowledgeDB.getAllKnowledge();
 
             if (entries.length === 0) {
-                alert('No knowledge entries to export. Browse some pages with Knowledge Mode enabled first!');
+                alert('没有知识条目可导出。请先启用知识模式并浏览一些页面！');
                 return;
             }
 
@@ -2585,7 +2774,7 @@ class KnowledgeBookExporter {
 
         } catch (err) {
             console.error('Export failed:', err);
-            alert('Export failed: ' + err.message);
+            alert('导出失败：' + err.message);
         } finally {
             // Re-enable button
             if (this.exportBtn) {
@@ -3019,7 +3208,7 @@ class KnowledgeBookExporter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        alert('PDF export not available in this context. HTML file downloaded instead - you can open it and print to PDF.');
+        alert('在此上下文中无法导出 PDF。已下载 HTML 文件，您可以打开它并打印为 PDF。');
     }
 }
 
@@ -3108,9 +3297,17 @@ class BookmarkManager {
 
     getDefaultBookmarks() {
         return [
-            { id: 1, title: 'Google', url: 'https://www.google.com', favicon: null, folderId: null },
-            { id: 2, title: 'YouTube', url: 'https://www.youtube.com', favicon: null, folderId: null },
-            { id: 3, title: 'GitHub', url: 'https://github.com', favicon: null, folderId: null },
+            { id: 1, title: '百度', url: 'https://www.baidu.com', favicon: null, folderId: null },
+            { id: 2, title: '淘宝', url: 'https://www.taobao.com', favicon: null, folderId: null },
+            { id: 3, title: '京东', url: 'https://www.jd.com', favicon: null, folderId: null },
+            { id: 4, title: 'B站', url: 'https://www.bilibili.com', favicon: null, folderId: null },
+            { id: 5, title: '知乎', url: 'https://www.zhihu.com', favicon: null, folderId: null },
+            { id: 6, title: '微博', url: 'https://www.weibo.com', favicon: null, folderId: null },
+            { id: 7, title: '网易云音乐', url: 'https://music.163.com', favicon: null, folderId: null },
+            { id: 8, title: '腾讯视频', url: 'https://v.qq.com', favicon: null, folderId: null },
+            { id: 9, title: '爱奇艺', url: 'https://www.iqiyi.com', favicon: null, folderId: null },
+            { id: 10, title: '百度网盘', url: 'https://pan.baidu.com', favicon: null, folderId: null },
+            { id: 11, title: 'GitHub', url: 'https://github.com', favicon: null, folderId: null },
         ];
     }
 
@@ -3375,10 +3572,10 @@ class BookmarkManager {
         const menu = document.createElement('div');
         menu.className = 'context-menu';
         menu.innerHTML = `
-            <div class="context-menu-item" data-action="open-new-tab">Open in new tab</div>
-            <div class="context-menu-item" data-action="edit">Edit</div>
+            <div class="context-menu-item" data-action="open-new-tab">在新标签页中打开</div>
+            <div class="context-menu-item" data-action="edit">编辑</div>
             <div class="context-menu-divider"></div>
-            <div class="context-menu-item danger" data-action="delete">Delete</div>
+            <div class="context-menu-item danger" data-action="delete">删除</div>
         `;
 
         menu.style.top = `${e.clientY}px`;
@@ -3406,9 +3603,9 @@ class BookmarkManager {
         const menu = document.createElement('div');
         menu.className = 'context-menu';
         menu.innerHTML = `
-            <div class="context-menu-item" data-action="rename">Rename</div>
+            <div class="context-menu-item" data-action="rename">重命名</div>
             <div class="context-menu-divider"></div>
-            <div class="context-menu-item danger" data-action="delete">Delete folder</div>
+            <div class="context-menu-item danger" data-action="delete">删除文件夹</div>
         `;
 
         menu.style.top = `${e.clientY}px`;
@@ -3419,7 +3616,7 @@ class BookmarkManager {
             if (action === 'delete') {
                 this.deleteFolder(folder.id);
             } else if (action === 'rename') {
-                const newName = prompt('Folder name:', folder.name);
+                const newName = prompt('文件夹名称：', folder.name);
                 if (newName) {
                     folder.name = newName;
                     this.saveFolders();
@@ -3448,7 +3645,7 @@ class BookmarkManager {
     }
 
     editBookmark(bookmark) {
-        const newTitle = prompt('Bookmark title:', bookmark.title);
+        const newTitle = prompt('书签标题：', bookmark.title);
         if (newTitle !== null) {
             bookmark.title = newTitle || bookmark.title;
             this.saveBookmarks();
@@ -3549,10 +3746,10 @@ class BookmarkManager {
                 <line x1="12" y1="11" x2="12" y2="17"/>
                 <line x1="9" y1="14" x2="15" y2="14"/>
             </svg>
-            New folder
+            新建文件夹
         `;
         addFolderItem.addEventListener('click', () => {
-            const name = prompt('Folder name:');
+            const name = prompt('文件夹名称：');
             if (name) {
                 this.createFolder(name);
             }
@@ -3822,11 +4019,11 @@ class HistoryManager {
         panel.querySelector('#clearHistoryBtn').addEventListener('click', () => {
             const activeTab = panel.querySelector('.history-tab.active').dataset.tab;
             if (activeTab === 'history') {
-                if (confirm('Clear all browsing history?')) {
+                if (confirm('确定清除所有浏览历史？')) {
                     this.clearHistory();
                 }
             } else {
-                if (confirm('Clear all recently closed tabs?')) {
+                if (confirm('确定清除所有最近关闭的标签页？')) {
                     this.clearClosedTabs();
                 }
             }
@@ -4503,7 +4700,7 @@ class MainMenuManager {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
                 </svg>
-                New Incognito Window
+                新建隐身窗口
             </div>
             <div class="main-menu-divider"></div>
             <div class="main-menu-item" id="menuHistory">
@@ -4511,14 +4708,14 @@ class MainMenuManager {
                     <circle cx="12" cy="12" r="10"/>
                     <polyline points="12 6 12 12 16 14"/>
                 </svg>
-                History
+                历史记录
             </div>
             <div class="main-menu-item" id="menuKnowledge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                 </svg>
-                My Knowledge
+                我的知识
             </div>
             <div class="main-menu-item" id="menuSummarize">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4528,7 +4725,7 @@ class MainMenuManager {
                     <line x1="16" y1="17" x2="8" y2="17"/>
                     <polyline points="10 9 9 9 8 9"/>
                 </svg>
-                ✨ Summarize Page
+                ✨ 摘要页面
             </div>
             <div class="main-menu-item" id="menuExportPDF">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4537,7 +4734,7 @@ class MainMenuManager {
                     <line x1="12" y1="18" x2="12" y2="12"/>
                     <polyline points="9 15 12 12 15 15"/>
                 </svg>
-                📘 Export Knowledge PDF
+                📘 导出知识 PDF
             </div>
             <div class="main-menu-divider"></div>
             <div class="main-menu-item" id="menuSettings">
@@ -4545,7 +4742,14 @@ class MainMenuManager {
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
-                Settings
+                设置
+            </div>
+            <div class="main-menu-item" id="menuDevTools">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                开发者工具
             </div>
         `;
         document.body.appendChild(menu);
@@ -4608,7 +4812,7 @@ class MainMenuManager {
                         }
                     } else {
                         console.error('historyManager not found!');
-                        alert('History not available - historyManager is not initialized');
+                        alert('历史记录不可用 - historyManager 未初始化');
                     }
                 } else if (itemId === 'menuKnowledge') {
                     console.log('Opening knowledge panel...');
@@ -4632,13 +4836,13 @@ class MainMenuManager {
                         }
                     } else {
                         console.error('settingsManager not found!');
-                        alert('Settings not available - settingsManager is not initialized');
+                        alert('设置不可用 - settingsManager 未初始化');
                     }
                 } else if (itemId === 'menuSummarize') {
                     console.log('Summarize page clicked from menu...');
                     // Check if Knowledge Mode is ON
                     if (!window.knowledgeManager || !window.knowledgeManager.isKnowledgeModeEnabled()) {
-                        alert('Enable Knowledge Mode to summarize.');
+                        alert('请启用知识模式以进行总结。');
                         return;
                     }
                     // Trigger summarization
@@ -4670,12 +4874,12 @@ class MainMenuManager {
                                         const summaryResult = window.ruleSummarizer.summarize(pageContent);
                                         window.summaryModalUI.showSummaryModal(summaryResult);
                                     } else {
-                                        alert('No content found on this page to summarize.');
+                                        alert('此页面没有找到内容可总结。');
                                     }
                                 })
                                 .catch(err => {
                                     console.error('Failed to summarize:', err);
-                                    alert('Failed to extract content from this page.');
+                                    alert('无法从此页面提取内容。');
                                 });
                         } else {
                             alert('Navigate to a page first to summarize its content.');
@@ -4688,13 +4892,30 @@ class MainMenuManager {
                     } else if (window.knowledgeDB) {
                         window.knowledgeDB.getAllEntries().then(entries => {
                             if (!entries || entries.length === 0) {
-                                alert('No knowledge entries found. Browse some pages with Knowledge Mode ON first!');
+                                alert('未找到知识条目。请先启用知识模式并浏览一些页面！');
                             } else {
-                                alert('Knowledge Book export ready! Found ' + entries.length + ' entries.');
+                                alert('知识库导出准备就绪！找到 ' + entries.length + ' 个条目。');
                             }
                         });
                     } else {
-                        alert('Knowledge system is not ready.');
+                        alert('知识系统未就绪。');
+                    }
+                } else if (itemId === 'menuDevTools') {
+                    console.log('Opening DevTools for active tab...');
+                    if (window.tabManager) {
+                        const activeTab = window.tabManager.tabs.get(window.tabManager.activeTabId);
+                        if (activeTab && activeTab.webview) {
+                            try {
+                                activeTab.webview.openDevTools();
+                            } catch (err) {
+                                console.error('Error opening DevTools:', err);
+                                alert('无法打开开发者工具：' + err.message);
+                            }
+                        } else {
+                            alert('没有活动标签页可打开开发者工具。');
+                        }
+                    } else {
+                        alert('标签管理器未初始化。');
                     }
                 } else {
                     console.log('Unknown itemId:', itemId);
@@ -4999,7 +5220,7 @@ class SettingsManager {
         // Default settings
         this.defaults = {
             // Search Engine
-            searchEngine: 'google',
+            searchEngine: 'chickrubgo',
             // Startup
             startupMode: 'newTab',
             customStartupUrl: '',
@@ -5097,9 +5318,10 @@ class SettingsManager {
     getSearchEngines() {
         return [
             { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=' },
-            { id: 'bing', name: 'Bing', url: 'https://www.bing.com/search?q=' },
+            { id: 'bing', name: 'Bing (China)', url: 'https://cn.bing.com/search?q=' },
             { id: 'duckduckgo', name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' },
-            { id: 'brave', name: 'Brave Search', url: 'https://search.brave.com/search?q=' }
+            { id: 'brave', name: 'Brave Search', url: 'https://search.brave.com/search?q=' },
+            { id: 'chickrubgo', name: 'ChickRubGo', url: 'https://ruanmingze.github.io/ChickRubGo/search?q=' }
         ];
     }
 
@@ -5113,7 +5335,7 @@ class SettingsManager {
         panel.className = 'settings-panel';
         panel.innerHTML = `
             <div class="settings-panel-header">
-                <h2>Settings</h2>
+                <h2>设置</h2>
                 <button class="settings-panel-close" id="settingsPanelClose">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6L6 18M6 6l12 12"/>
@@ -5124,35 +5346,35 @@ class SettingsManager {
                 <nav class="settings-nav">
                     <button class="settings-nav-item active" data-section="search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                        Search Engine
+                        搜索引擎
                     </button>
                     <button class="settings-nav-item" data-section="startup">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        Startup
+                        启动
                     </button>
                     <button class="settings-nav-item" data-section="privacy">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        Privacy
+                        隐私
                     </button>
                     <button class="settings-nav-item" data-section="downloads">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        Downloads
+                        下载
                     </button>
                     <button class="settings-nav-item" data-section="appearance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                        Appearance
+                        外观
                     </button>
                     <button class="settings-nav-item" data-section="performance">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                        Performance
+                        性能
                     </button>
                     <button class="settings-nav-item" data-section="security">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Security
+                        安全
                     </button>
                     <button class="settings-nav-item" data-section="shortcuts">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="10" y2="16"/></svg>
-                        Shortcuts
+                        快捷键
                     </button>
                 </nav>
                 <div class="settings-content" id="settingsContent">
@@ -5199,8 +5421,8 @@ class SettingsManager {
         const engines = this.getSearchEngines();
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Default Search Engine</h3>
-                <p class="settings-section-desc">Choose the search engine used in the address bar.</p>
+                <h3 class="settings-section-title">默认搜索引擎</h3>
+                <p class="settings-section-desc">选择地址栏中使用的搜索引擎。</p>
                 <div class="settings-radio-group">
                     ${engines.map(e => `
                         <label class="settings-radio">
@@ -5217,23 +5439,23 @@ class SettingsManager {
     renderStartupSection() {
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">On Startup</h3>
-                <p class="settings-section-desc">Choose what happens when you open the browser.</p>
+                <h3 class="settings-section-title">启动时</h3>
+                <p class="settings-section-desc">选择浏览器打开时的行为。</p>
                 <div class="settings-radio-group">
                     <label class="settings-radio">
                         <input type="radio" name="startupMode" value="newTab" ${this.settings.startupMode === 'newTab' ? 'checked' : ''}>
                         <span class="settings-radio-mark"></span>
-                        <span class="settings-radio-label">Open New Tab</span>
+                        <span class="settings-radio-label">打开新标签页</span>
                     </label>
                     <label class="settings-radio">
                         <input type="radio" name="startupMode" value="restore" ${this.settings.startupMode === 'restore' ? 'checked' : ''}>
                         <span class="settings-radio-mark"></span>
-                        <span class="settings-radio-label">Restore Last Session</span>
+                        <span class="settings-radio-label">恢复上次会话</span>
                     </label>
                     <label class="settings-radio">
                         <input type="radio" name="startupMode" value="custom" ${this.settings.startupMode === 'custom' ? 'checked' : ''}>
                         <span class="settings-radio-mark"></span>
-                        <span class="settings-radio-label">Open Custom Website</span>
+                        <span class="settings-radio-label">打开自定义网站</span>
                     </label>
                 </div>
                 <div class="settings-input-group" style="margin-top: 12px; ${this.settings.startupMode !== 'custom' ? 'display:none;' : ''}" id="customUrlGroup">
@@ -5248,46 +5470,46 @@ class SettingsManager {
 
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">🧠 Knowledge Mode - Privacy</h3>
+                <h3 class="settings-section-title">🧠 知识模式 - 隐私</h3>
                 <div class="privacy-warning-box">
                     <div class="privacy-warning-icon">🔒</div>
                     <div class="privacy-warning-text">
-                        <strong>Privacy Notice</strong><br>
-                        No data is collected unless Knowledge Mode is ON.<br>
-                        Knowledge Mode requires manual activation only.
+                        <strong>隐私通知</strong><br>
+                        除非知识模式开启，否则不会收集任何数据。<br>
+                        知识模式仅需要手动激活。
                     </div>
                 </div>
                 <div class="knowledge-status-row">
-                    <span>Current Status:</span>
+                    <span>当前状态：</span>
                     <span class="knowledge-status-badge ${isKnowledgeModeOn ? 'on' : 'off'}">
                         ${isKnowledgeModeOn ? '🟢 ON' : '🔴 OFF'}
                     </span>
                 </div>
-                <p class="settings-section-desc">Toggle Knowledge Mode using the 🧠 button in the navigation bar.</p>
+                <p class="settings-section-desc">使用导航栏中的 🧠 按钮切换知识模式。</p>
             </div>
             
             <div class="settings-section">
-                <h3 class="settings-section-title">🗑️ Clear Knowledge Data</h3>
-                <p class="settings-section-desc">Permanently delete all stored knowledge entries. This cannot be undone.</p>
+                <h3 class="settings-section-title">🗑️ 清除知识数据</h3>
+                <p class="settings-section-desc">永久删除所有存储的知识条目。此操作无法撤销。</p>
                 <button class="settings-btn danger full-width" id="clearAllKnowledge">
-                    🗑️ Clear All Knowledge Data
+                    🗑️ 清除所有知识数据
                 </button>
-                <p class="privacy-info-small">This will delete all IndexedDB data and turn Knowledge Mode OFF.</p>
+                <p class="privacy-info-small">这将删除所有 IndexedDB 数据并关闭知识模式。</p>
             </div>
 
             <div class="settings-section">
-                <h3 class="settings-section-title">History</h3>
-                ${this.createToggle('disableHistoryTracking', 'Disable History Tracking', 'Your browsing history will not be saved')}
+                <h3 class="settings-section-title">历史记录</h3>
+                ${this.createToggle('disableHistoryTracking', '禁用历史记录跟踪', '您的浏览历史将不会被保存')}
             </div>
             <div class="settings-section">
-                <h3 class="settings-section-title">Clear Browsing Data</h3>
+                <h3 class="settings-section-title">清除浏览数据</h3>
                 <div class="settings-btn-group">
-                    <button class="settings-btn danger" id="clearHistory">Clear History</button>
-                    <button class="settings-btn danger" id="clearCache">Clear Cache</button>
-                    <button class="settings-btn danger" id="clearCookies">Clear Cookies</button>
+                    <button class="settings-btn danger" id="clearHistory">清除历史记录</button>
+                    <button class="settings-btn danger" id="clearCache">清除缓存</button>
+                    <button class="settings-btn danger" id="clearCookies">清除 Cookies</button>
                 </div>
                 <button class="settings-btn danger full-width" id="clearAllData" style="margin-top: 12px;">
-                    Clear All Browsing Data
+                    清除所有浏览数据
                 </button>
             </div>
         `;
@@ -5296,11 +5518,11 @@ class SettingsManager {
     renderDownloadsSection() {
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Download Settings</h3>
-                ${this.createToggle('askBeforeDownload', 'Ask where to save each file', 'Prompt for download location before saving')}
+                <h3 class="settings-section-title">下载设置</h3>
+                ${this.createToggle('askBeforeDownload', '询问每个文件的保存位置', '在保存前提示下载位置')}
                 <div class="settings-input-group" style="margin-top: 16px;">
-                    <label class="settings-label">Download Location (display only)</label>
-                    <input type="text" class="settings-input" id="downloadPath" value="${this.settings.downloadPath || 'Default Downloads Folder'}" readonly>
+                    <label class="settings-label">下载位置（仅显示）</label>
+                    <input type="text" class="settings-input" id="downloadPath" value="${this.settings.downloadPath || '默认下载文件夹'}" readonly>
                 </div>
             </div>
         `;
@@ -5309,38 +5531,38 @@ class SettingsManager {
     renderAppearanceSection() {
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Theme</h3>
+                <h3 class="settings-section-title">主题</h3>
                 <div class="settings-radio-group horizontal">
                     <label class="settings-radio-card">
                         <input type="radio" name="theme" value="dark" ${this.settings.theme === 'dark' ? 'checked' : ''}>
                         <div class="settings-radio-card-content">
                             <span class="theme-icon dark">🌙</span>
-                            <span>Dark</span>
+                            <span>深色</span>
                         </div>
                     </label>
                     <label class="settings-radio-card">
                         <input type="radio" name="theme" value="light" ${this.settings.theme === 'light' ? 'checked' : ''}>
                         <div class="settings-radio-card-content">
                             <span class="theme-icon light">☀️</span>
-                            <span>Light</span>
+                            <span>浅色</span>
                         </div>
                     </label>
                     <label class="settings-radio-card">
                         <input type="radio" name="theme" value="system" ${this.settings.theme === 'system' ? 'checked' : ''}>
                         <div class="settings-radio-card-content">
                             <span class="theme-icon system">💻</span>
-                            <span>System</span>
+                            <span>系统</span>
                         </div>
                     </label>
                 </div>
             </div>
             <div class="settings-section">
-                <h3 class="settings-section-title">UI Zoom: ${this.settings.zoomLevel}%</h3>
+                <h3 class="settings-section-title">UI 缩放：${this.settings.zoomLevel}%</h3>
                 <input type="range" class="settings-slider" id="zoomLevel" min="90" max="130" step="5" value="${this.settings.zoomLevel}">
                 <div class="settings-slider-labels"><span>90%</span><span>100%</span><span>130%</span></div>
             </div>
             <div class="settings-section">
-                <h3 class="settings-section-title">Font Size: ${this.settings.fontSize}px</h3>
+                <h3 class="settings-section-title">字体大小：${this.settings.fontSize}px</h3>
                 <input type="range" class="settings-slider" id="fontSize" min="12" max="18" step="1" value="${this.settings.fontSize}">
                 <div class="settings-slider-labels"><span>12px</span><span>14px</span><span>18px</span></div>
             </div>
@@ -5353,7 +5575,7 @@ class SettingsManager {
 
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Memory Usage</h3>
+                <h3 class="settings-section-title">内存使用</h3>
                 <div class="settings-memory-display">
                     <div class="memory-bar">
                         <div class="memory-bar-fill" style="width: ${performance.memory ? (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit * 100) : 50}%"></div>
@@ -5362,9 +5584,9 @@ class SettingsManager {
                 </div>
             </div>
             <div class="settings-section">
-                <h3 class="settings-section-title">Performance Options</h3>
-                ${this.createToggle('lowMemoryMode', 'Low Memory Mode', 'Reduces memory usage by limiting background processes')}
-                ${this.createToggle('hardwareAcceleration', 'Hardware Acceleration', 'Use GPU for rendering when available')}
+                <h3 class="settings-section-title">性能选项</h3>
+                ${this.createToggle('lowMemoryMode', '低内存模式', '通过限制后台进程来减少内存使用')}
+                ${this.createToggle('hardwareAcceleration', '硬件加速', '在可用时使用 GPU 进行渲染')}
             </div>
         `;
     }
@@ -5372,11 +5594,11 @@ class SettingsManager {
     renderSecuritySection() {
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Security & Privacy</h3>
-                ${this.createToggle('blockPopups', 'Block Popups', 'Prevent websites from opening popup windows')}
-                ${this.createToggle('blockThirdPartyCookies', 'Block Third-Party Cookies', 'Prevent tracking cookies from other sites')}
-                ${this.createToggle('doNotTrack', 'Send "Do Not Track" Request', 'Ask websites not to track your browsing')}
-                ${this.createToggle('httpsOnly', 'HTTPS-Only Mode', 'Warn when connecting to insecure sites')}
+                <h3 class="settings-section-title">安全与隐私</h3>
+                ${this.createToggle('blockPopups', '阻止弹出窗口', '防止网站打开弹出窗口')}
+                ${this.createToggle('blockThirdPartyCookies', '阻止第三方 Cookies', '防止来自其他网站的跟踪 cookies')}
+                ${this.createToggle('doNotTrack', '发送"请勿跟踪"请求', '要求网站不要跟踪您的浏览')}
+                ${this.createToggle('httpsOnly', '仅 HTTPS 模式', '连接到不安全网站时发出警告')}
             </div>
         `;
     }
@@ -5385,8 +5607,8 @@ class SettingsManager {
         const shortcuts = this.settings.shortcuts || this.defaults.shortcuts;
         return `
             <div class="settings-section">
-                <h3 class="settings-section-title">Keyboard Shortcuts</h3>
-                <p class="settings-section-desc">Customize keyboard shortcuts (read-only display).</p>
+                <h3 class="settings-section-title">键盘快捷键</h3>
+                <p class="settings-section-desc">自定义键盘快捷键（只读显示）。</p>
                 <div class="settings-shortcuts-list">
                     ${Object.entries(shortcuts).map(([key, value]) => `
                         <div class="settings-shortcut-item">
@@ -5505,40 +5727,40 @@ class SettingsManager {
 
         // Clear data buttons
         document.getElementById('clearHistory')?.addEventListener('click', () => {
-            if (confirm('Clear all browsing history?')) {
+            if (confirm('确定清除所有浏览历史？')) {
                 localStorage.removeItem('focusflow-history');
                 if (window.historyManager) window.historyManager.history = [];
-                alert('History cleared!');
+                alert('历史记录已清除！');
             }
         });
 
         document.getElementById('clearCache')?.addEventListener('click', () => {
-            if (confirm('Clear cache? (Not fully supported in web)')) {
-                alert('Cache clear requested.');
+            if (confirm('确定清除缓存？（在 Web 中不完全支持）')) {
+                alert('已请求清除缓存。');
             }
         });
 
         document.getElementById('clearCookies')?.addEventListener('click', () => {
-            if (confirm('Clear cookies? (Not fully supported in web)')) {
-                alert('Cookie clear requested.');
+            if (confirm('确定清除 Cookie？（在 Web 中不完全支持）')) {
+                alert('已请求清除 Cookie。');
             }
         });
 
         document.getElementById('clearAllData')?.addEventListener('click', () => {
-            if (confirm('Clear ALL browsing data including history, cache, and cookies?')) {
+            if (confirm('确定清除所有浏览数据，包括历史记录、缓存和 Cookie？')) {
                 localStorage.removeItem('focusflow-history');
                 localStorage.removeItem('focusflow-closed-tabs');
                 if (window.historyManager) {
                     window.historyManager.history = [];
                     window.historyManager.recentlyClosed = [];
                 }
-                alert('All browsing data cleared!');
+                alert('所有浏览数据已清除！');
             }
         });
 
         // Clear All Knowledge Data
         document.getElementById('clearAllKnowledge')?.addEventListener('click', async () => {
-            if (confirm('⚠️ Delete ALL knowledge data?\n\nThis will:\n• Delete all stored knowledge entries\n• Turn Knowledge Mode OFF\n• This action cannot be undone!')) {
+            if (confirm('⚠️ 删除所有知识数据？\n\n这将：\n• 删除所有存储的知识条目\n• 关闭知识模式\n• 此操作无法撤销！')) {
                 try {
                     // Clear IndexedDB
                     if (window.knowledgeDB) {
@@ -5553,10 +5775,10 @@ class SettingsManager {
                     // Re-render the privacy section to update status
                     this.renderSection('privacy');
 
-                    alert('✅ All knowledge data has been cleared.\nKnowledge Mode has been turned OFF.');
+                    alert('✅ 所有知识数据已清除。\n知识模式已关闭。');
                 } catch (err) {
                     console.error('Failed to clear knowledge data:', err);
-                    alert('Failed to clear knowledge data: ' + err.message);
+                    alert('清除知识数据失败：' + err.message);
                 }
             }
         });
@@ -5835,6 +6057,54 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('✓ Extensions button listener attached');
     } else {
         console.error('✗ extensionsBtn not found in DOM');
+    }
+
+    // ============================================
+    // Window Control Buttons
+    // ============================================
+    const minimizeBtn = document.querySelector('.window-btn.minimize');
+    const maximizeBtn = document.querySelector('.window-btn.maximize');
+    const closeBtn = document.querySelector('.window-btn.close');
+
+    console.log('Window control buttons:', { minimizeBtn, maximizeBtn, closeBtn });
+
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', (e) => {
+            console.log('Minimize button clicked!');
+            e.stopPropagation();
+            if (window.focusFlowAPI && window.focusFlowAPI.window) {
+                window.focusFlowAPI.window.minimize();
+            }
+        });
+        console.log('✓ Minimize button listener attached');
+    } else {
+        console.error('✗ minimizeBtn not found in DOM');
+    }
+
+    if (maximizeBtn) {
+        maximizeBtn.addEventListener('click', (e) => {
+            console.log('Maximize button clicked!');
+            e.stopPropagation();
+            if (window.focusFlowAPI && window.focusFlowAPI.window) {
+                window.focusFlowAPI.window.maximize();
+            }
+        });
+        console.log('✓ Maximize button listener attached');
+    } else {
+        console.error('✗ maximizeBtn not found in DOM');
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+            console.log('Close button clicked!');
+            e.stopPropagation();
+            if (window.focusFlowAPI && window.focusFlowAPI.window) {
+                window.focusFlowAPI.window.close();
+            }
+        });
+        console.log('✓ Close button listener attached');
+    } else {
+        console.error('✗ closeBtn not found in DOM');
     }
 
     // ============================================
