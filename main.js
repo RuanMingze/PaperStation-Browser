@@ -40,7 +40,7 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 
     // Open DevTools
-     mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
 
     // Handle window closed
     mainWindow.on('closed', () => {
