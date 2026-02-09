@@ -34,7 +34,7 @@ Papstation Browser 基于 Flowmora Browser 二次开发，专注于为科研人�
 | 📖 结构化知识导出 | ❌ | ✅ |
 | 🌙 内置深色模式 | ✅ | ✅ |
 | 🔒 隐私优先设计 | ⚠️ | ✅ |
-| 🚀 轻量高效 | ⚠️ | ✅ (内存占用比 Chrome 低40%+) |
+| 🚀 轻量高效 | ⚠️ | ✅ |
 | 🎨 现代界面 | ✅ | ✅ |
 | 🐔 ChickRubGo 本土化搜索 | ❌ | ✅ |
 | 🌍 中文全本地化 | ❌ | ✅ |
@@ -160,4 +160,5 @@ Papstation Browser 基于 Flowmora Browser 二次开发，后者同样采用 MIT
 
 <p align="center">
   Made with ❤️ 为科研与学习而生
+
 </p>
