@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, session, shell } = require('electron');
 const path = require('path');
+const { default: contextMenu } = require('electron-context-menu');
 
 // Disable WebViewAllowPopupsWarning to allow popups
 app.commandLine.appendSwitch('disable-features', 'WebViewAllowPopupsWarning');
@@ -399,6 +400,132 @@ ipcMain.handle('open-incognito-window', () => {
 // App Lifecycle
 // ============================================
 app.whenReady().then(() => {
+    // Initialize context menu for browser functionality
+    contextMenu({
+        showSaveImageAs: true,
+        showInspectElement: false, // Disable default inspect to use our custom one
+        showCopyImageAddress: true,
+        showCopyLinkAddress: true,
+        showCopy: true,
+        showPaste: true,
+        showSelectAll: false, // Disable default select all to use our custom one
+        showSearchWithGoogle: true,
+        translations: {
+            copy: '复制',
+            paste: '粘贴',
+            cut: '剪切',
+            saveImageAs: '将图片另存为...',
+            copyImageAddress: '复制图片地址',
+            copyLinkAddress: '复制链接地址',
+            searchWithGoogle: '使用Google搜索',
+            selectAll: '全选',
+            inspectElement: '检查元素'
+        },
+        prepend: (params, browserWindow) => {
+            const menuItems = [];
+            
+            // Navigation buttons
+            menuItems.push(
+                {
+                    label: '后退',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        if (browserWindow.webContents.canGoBack()) {
+                            browserWindow.webContents.goBack();
+                        }
+                    }
+                },
+                {
+                    label: '前进',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        if (browserWindow.webContents.canGoForward()) {
+                            browserWindow.webContents.goForward();
+                        }
+                    }
+                },
+                {
+                    label: '刷新页面',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.reload();
+                    }
+                }
+            );
+            
+            // Separator
+            if (params.mediaType === 'none') {
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Link handling
+            if (params.linkURL && params.mediaType === 'none') {
+                menuItems.push(
+                    {
+                        label: '在新标签页中打开链接',
+                        click: () => {
+                            if (mainWindow && !mainWindow.isDestroyed()) {
+                                mainWindow.webContents.executeJavaScript(`
+                                    if (window.tabManager) {
+                                        window.tabManager.createTab('${params.linkURL}');
+                                    }
+                                `).catch(err => {
+                                    console.error('Failed to open link in new tab:', err);
+                                });
+                            }
+                        }
+                    }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Page actions
+            menuItems.push(
+                {
+                    label: '另存为...',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.executeJavaScript(`
+                            if (window.tabManager) {
+                                const activeTab = window.tabManager.getActiveTab();
+                                if (activeTab) {
+                                    window.tabManager.savePage(activeTab.id);
+                                }
+                            }
+                        `).catch(err => {
+                            console.error('Failed to save page:', err);
+                        });
+                    }
+                },
+                {
+                    label: '检查',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.openDevTools();
+                    }
+                }
+            );
+            
+            // Separator
+            if (params.mediaType === 'none') {
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Select all
+            menuItems.push(
+                {
+                    label: '全选',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.executeJavaScript('document.execCommand("selectAll")');
+                    }
+                }
+            );
+            
+            return menuItems;
+        }
+    });
+
     createWindow();
 
     // On macOS, re-create window when dock icon is clicked
@@ -426,7 +553,36 @@ app.on('web-contents-created', (event, contents) => {
     }
 
     contents.setWindowOpenHandler(({ url }) => {
-        // Could open in new tab instead
+        // Handle target="_blank" links by opening in new tab
+        if (url && url.startsWith('file://')) {
+            // For local file links (like error pages), open in new tab
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.executeJavaScript(`
+                    if (window.tabManager) {
+                        window.tabManager.createTab('${url}');
+                    }
+                `).catch(err => {
+                    console.error('Failed to open new tab:', err);
+                });
+            }
+            return { action: 'deny' };
+        }
+        
+        // For external URLs, open in new tab
+        if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.executeJavaScript(`
+                    if (window.tabManager) {
+                        window.tabManager.createTab('${url}');
+                    }
+                `).catch(err => {
+                    console.error('Failed to open new tab:', err);
+                });
+            }
+            return { action: 'deny' };
+        }
+        
+        // Deny other new window requests
         return { action: 'deny' };
     });
 });

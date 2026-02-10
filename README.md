@@ -3,7 +3,7 @@
 <h1 align="center">Papstation Browser</h1>
 
 <p align="center">
-  <strong>🎯 面向科研与学生群体的知识型浏览器，基于 Electron+Chromium 打造</strong>
+  <strong>🎯 全面发展的现代化浏览器，基于 Electron+Chromium 打造</strong>
 </p>
 
 <p align="center">
@@ -16,16 +16,18 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows-blue?style=flat-square&logo=windows" alt="Platform">
-  <img src="https://img.shields.io/badge/Electron-40.1.0-47848F?style=flat-square&logo=electron" alt="Electron">
+  <img src="https://img.shields.io/badge/Electron-40.2.1-47848F?style=flat-square&logo=electron" alt="Electron">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License">
-  <img src="https://img.shields.io/badge/Version-1.0.0-orange?style=flat-square" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.1.0-orange?style=flat-square" alt="Version">
 </p>
 
 ---
 
 ## 🚀 核心优势
 
-Papstation Browser 基于 Flowmora Browser 二次开发，专注于为科研人员和学生提供高效的知识获取与管理体验。
+Papstation Browser 最初基于 Flowmora Browser 二次开发，现已独立发展成为一个全面发展的现代化浏览器项目，提供丰富的功能和流畅的用户体验。
+
+**注**：Flowmora Browser 项目似乎已停止更新，Papstation Browser 在此基础上进行了全面的功能增强和技术改进，成为一个独立维护的完整项目。
 
 | 特性 | Chrome/Edge | Papstation |
 |------|:-----------:|:----------:|
@@ -34,7 +36,7 @@ Papstation Browser 基于 Flowmora Browser 二次开发，专注于为科研人�
 | 📖 结构化知识导出 | ❌ | ✅ |
 | 🌙 内置深色模式 | ✅ | ✅ |
 | 🔒 隐私优先设计 | ⚠️ | ✅ |
-| 🚀 轻量高效 | ⚠️ | ✅ (内存占用比 Chrome 低40%+) |
+| 🚀 轻量高效 | ⚠️ | ✅ |
 | 🎨 现代界面 | ✅ | ✅ |
 | 🐔 ChickRubGo 本土化搜索 | ❌ | ✅ |
 | 🌍 中文全本地化 | ❌ | ✅ |
@@ -49,7 +51,7 @@ Papstation Browser 基于 Flowmora Browser 二次开发，专注于为科研人�
 - **关联整理**：建立知识点之间的逻辑联系
 - **本地存储**：所有数据保存在本地，确保隐私安全
 
-### � 智能总结
+### 🔍 智能总结
 - **一键总结**：点击按钮即可生成页面核心内容摘要
 - **要点提取**：自动识别并提取5个核心要点
 - **术语解释**：智能识别并解释3个关键术语
@@ -159,5 +161,5 @@ Papstation Browser 基于 Flowmora Browser 二次开发，后者同样采用 MIT
 ---
 
 <p align="center">
-  Made with ❤️ 为科研与学习而生
+  Made with ❤️ 全面发展的现代化浏览器
 </p>

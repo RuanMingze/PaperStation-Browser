@@ -278,29 +278,12 @@ class TabManager {
     }
 
     setupWebviewListeners(tabId, webview) {
-        // Context menu - disabled
-        // webview.addEventListener('contextmenu', (e) => {
-        //     // Log all relevant event properties
-        //     console.log('Context menu event details:', {
-        //         shiftKey: e.shiftKey,
-        //         button: e.button,
-        //         buttons: e.buttons,
-        //         ctrlKey: e.ctrlKey,
-        //         altKey: e.altKey,
-        //         metaKey: e.metaKey,
-        //         type: e.type,
-        //         target: e.target ? e.target.tagName : null
-        //     });
-        //     
-        //     // Check if Shift key is pressed
-        //     if (e.shiftKey) {
-        //         console.log('Shift key is pressed!');
-        //         e.preventDefault();
-        //         this.showWebviewContextMenu(e, tabId, webview);
-        //     } else {
-        //         console.log('Shift key is NOT pressed, allowing default context menu');
-        //     }
-        // });
+        // Context menu for webview
+        webview.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            console.log('Webview context menu event triggered');
+            this.showWebviewContextMenu(e, tabId, webview);
+        });
 
         // Page title updated
         webview.addEventListener('page-title-updated', (e) => {
@@ -695,8 +678,48 @@ class TabManager {
     navigate(input) {
         let url = input.trim();
         
+        // Handle custom papstation:// protocol
+        if (url.startsWith('papstation://')) {
+            const path = url.substring('papstation://'.length);
+            
+            switch (path) {
+                case 'settings':
+                    // Open settings panel
+                    if (window.settingsManager) {
+                        window.settingsManager.togglePanel();
+                    } else {
+                        alert('设置面板不可用 - settingsManager 未初始化');
+                    }
+                    return;
+                case 'dino':
+                    // Open dinosaur game
+                    url = './errors/chrome-dinosaur-game/index.html';
+                    break;
+                case 'downloads':
+                    // Open downloads panel
+                    if (window.downloadManager) {
+                        window.downloadManager.togglePanel(true);
+                    } else {
+                        alert('下载面板不可用 - downloadManager 未初始化');
+                    }
+                    return;
+                case 'knowledge':
+                    // Open knowledge panel
+                    if (window.knowledgePanelManager) {
+                        window.knowledgePanelManager.open();
+                    } else {
+                        alert('知识面板不可用 - knowledgePanelManager 未初始化');
+                    }
+                    return;
+                default:
+                    // Invalid papstation protocol
+                    alert('无效的 Papstation 协议: ' + path);
+                    return;
+            }
+        }
+        
         // Use normalizeUrl directly to handle all cases correctly
-        url = this.normalizeUrl(input);
+        url = this.normalizeUrl(url);
         
         const tab = this.tabs.get(this.activeTabId);
 
@@ -1031,8 +1054,42 @@ class TabManager {
     // ============================================
 
     updateUrlBar(url) {
+        // For new tab pages, always show empty address bar
+        // This works regardless of whether preset home page is enabled or not
         if (url && url !== 'about:blank') {
-            this.urlInput.value = url;
+            // Check if this is a home page by domain and path
+            const homePageDomains = [
+                'google.com',
+                'bing.com',
+                'duckduckgo.com',
+                'yahoo.com',
+                'ecosia.org',
+                'ruanmingze.github.io'
+            ];
+            
+            let isHomePageRoot = false;
+            try {
+                const urlObj = new URL(url);
+                const domain = urlObj.hostname;
+                const pathname = urlObj.pathname;
+                
+                // Check if domain is a home page domain AND path is root (/) or empty
+                isHomePageRoot = homePageDomains.some(homeDomain => 
+                    (domain === homeDomain || domain.endsWith('.' + homeDomain)) && 
+                    (pathname === '/' || pathname === '')
+                );
+            } catch (e) {
+                // Invalid URL, not a home page
+            }
+            
+            // Check if this is a local preset home page
+            const isLocalPresetHome = url.includes('preset-home.html');
+            
+            if (!isHomePageRoot && !isLocalPresetHome) {
+                this.urlInput.value = url;
+            } else {
+                this.urlInput.value = '';
+            }
         } else {
             this.urlInput.value = '';
         }
@@ -4646,7 +4703,7 @@ class DownloadManager {
         // Listen for download events from main process
         window.focusFlowAPI.downloads.onStarted((data) => {
             this.addDownload(data);
-            this.showNotification(`Download started: ${data.filename}`);
+            this.showNotification(`下载开始: ${data.filename}`);
         });
 
         window.focusFlowAPI.downloads.onProgress((data) => {
@@ -4656,9 +4713,9 @@ class DownloadManager {
         window.focusFlowAPI.downloads.onCompleted((data) => {
             this.completeDownload(data);
             if (data.state === 'completed') {
-                this.showNotification(`Download completed: ${data.filename}`, 'success');
+                this.showNotification(`下载完成: ${data.filename}`, 'success');
             } else {
-                this.showNotification(`Download failed: ${data.filename}`, 'error');
+                this.showNotification(`下载失败: ${data.filename}`, 'error');
             }
         });
     }
@@ -4773,9 +4830,9 @@ class DownloadManager {
         panel.className = 'download-panel';
         panel.innerHTML = `
             <div class="download-panel-header">
-                <h3>Downloads</h3>
+                <h3>下载</h3>
                 <div class="download-panel-actions">
-                    <button class="download-clear-btn" id="clearDownloadsBtn" title="Clear completed">
+                    <button class="download-clear-btn" id="clearDownloadsBtn" title="清除已完成">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"/>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -4795,7 +4852,7 @@ class DownloadManager {
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    <p>No downloads</p>
+                    <p>暂无下载项</p>
                 </div>
             </div>
         `;
@@ -4848,7 +4905,7 @@ class DownloadManager {
                         <polyline points="7 10 12 15 17 10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    <p>No downloads</p>
+                    <p>暂无下载项</p>
                 </div>
             `;
             return;
@@ -4883,36 +4940,36 @@ class DownloadManager {
             case 'progressing':
                 statusText = `${received} / ${size} (${progress}%)`;
                 actionButtons = `
-                    <button class="download-action pause" data-id="${download.id}" title="Pause">
+                    <button class="download-action pause" data-id="${download.id}" title="暂停">
                         <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                     </button>
-                    <button class="download-action cancel" data-id="${download.id}" title="Cancel">
+                    <button class="download-action cancel" data-id="${download.id}" title="取消">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                 `;
                 break;
             case 'paused':
-                statusText = `Paused - ${received} / ${size}`;
+                statusText = `已暂停 - ${received} / ${size}`;
                 actionButtons = `
-                    <button class="download-action resume" data-id="${download.id}" title="Resume">
+                    <button class="download-action resume" data-id="${download.id}" title="继续">
                         <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     </button>
-                    <button class="download-action cancel" data-id="${download.id}" title="Cancel">
+                    <button class="download-action cancel" data-id="${download.id}" title="取消">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                 `;
                 break;
             case 'completed':
-                statusText = `Completed - ${size}`;
+                statusText = `已完成 - ${size}`;
                 actionButtons = `
-                    <button class="download-action open" data-path="${download.savePath}" title="Open">
+                    <button class="download-action open" data-path="${download.savePath}" title="打开">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                             <polyline points="15 3 21 3 21 9"/>
                             <line x1="10" y1="14" x2="21" y2="3"/>
                         </svg>
                     </button>
-                    <button class="download-action folder" data-path="${download.savePath}" title="Show in folder">
+                    <button class="download-action folder" data-path="${download.savePath}" title="在文件夹中显示">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                         </svg>
@@ -4921,7 +4978,7 @@ class DownloadManager {
                 break;
             case 'cancelled':
             case 'interrupted':
-                statusText = `Failed`;
+                statusText = `失败`;
                 actionButtons = '';
                 break;
         }
@@ -5943,12 +6000,12 @@ class SettingsManager {
 
     formatShortcutName(key) {
         const names = {
-            newTab: 'New Tab',
-            closeTab: 'Close Tab',
-            reload: 'Reload Page',
-            history: 'Open History',
-            bookmarks: 'Open Bookmarks',
-            commandPalette: 'Command Palette'
+            newTab: '新建标签页',
+            closeTab: '关闭标签页',
+            reload: '刷新页面',
+            history: '打开历史记录',
+            bookmarks: '打开书签',
+            commandPalette: '命令面板'
         };
         return names[key] || key;
     }

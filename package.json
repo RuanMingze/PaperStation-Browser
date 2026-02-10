@@ -1,6 +1,6 @@
 {
   "name": "papstation-browser",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "访问互联网",
   "main": "main.js",
   "scripts": {
@@ -16,20 +16,8 @@
     "productName": "Papstation",
     "copyright": "Copyright © 2026 Ruanm",
     "directories": {
-      "output": "dist",
-      "buildResources": "assets"
+      "output": "dist"
     },
-    "files": [
-      "**/*",
-      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
-      "!node_modules/.bin",
-      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
-      "!.git",
-      "!*.md",
-      "!LICENSE",
-      "!dist"
-    ],
     "win": {
       "target": [
         {
@@ -69,10 +57,11 @@
   "author": "RuanMingze",
   "license": "MIT",
   "dependencies": {
+    "electron-context-menu": "^4.1.1",
     "electron-squirrel-startup": "^1.0.0"
   },
   "devDependencies": {
-    "electron": "^40.1.0",
+    "electron": "^40.2.1",
     "electron-builder": "^25.1.8"
   }
 }
