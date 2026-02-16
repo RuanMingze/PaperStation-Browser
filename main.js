@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Notification } = require('electron');
 const path = require('path');
+const { default: contextMenu } = require('electron-context-menu');
 
 // Disable WebViewAllowPopupsWarning to allow popups
 app.commandLine.appendSwitch('disable-features', 'WebViewAllowPopupsWarning');
@@ -18,8 +19,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        title: 'Papstation',
-        icon: path.join(__dirname, 'assets/icon.png'),
+        title: 'PaperStation',
+        icon: path.join(__dirname, 'assets/icon-2.png'),
         frame: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -42,8 +43,10 @@ function createWindow() {
     // Load the index.html of the app
     mainWindow.loadFile('index.html');
 
-    // Open DevTools (disabled)
-    // mainWindow.webContents.openDevTools();
+    // Open DevTools in development mode only
+    if (isDev) {
+        mainWindow.webContents.openDevTools();
+    }
 
     // Handle window closed
     mainWindow.on('closed', () => {
@@ -81,6 +84,14 @@ function handleDownload(item) {
 
     downloads.set(downloadId, downloadInfo);
 
+    // 发送通知 - 新下载开始
+    const startNotification = new Notification({
+        title: '新下载开始',
+        body: `文件: ${downloadInfo.filename}\nURL: ${downloadInfo.url}`,
+        icon: path.join(__dirname, 'assets', 'icon-2.png')
+    });
+    startNotification.show();
+
     // Notify renderer about new download
     sendToRenderer('download-started', {
         id: downloadId,
@@ -94,6 +105,17 @@ function handleDownload(item) {
         downloadInfo.receivedBytes = item.getReceivedBytes();
         downloadInfo.state = state;
         downloadInfo.savePath = item.getSavePath();
+
+        // 当下载进度达到50%时发送通知
+        if (downloadInfo.receivedBytes >= downloadInfo.totalBytes / 2 && !downloadInfo.progressNotified) {
+            const progressNotification = new Notification({
+                title: '下载进度',
+                body: `${downloadInfo.filename} 已下载 ${(downloadInfo.receivedBytes / downloadInfo.totalBytes * 100).toFixed(2)}%`,
+                icon: path.join(__dirname, 'assets', 'icon-2.png')
+            });
+            progressNotification.show();
+            downloadInfo.progressNotified = true; // 标记已发送进度通知，避免重复发送
+        }
 
         sendToRenderer('download-progress', {
             id: downloadId,
@@ -117,6 +139,29 @@ function handleDownload(item) {
             savePath: downloadInfo.savePath,
             filename: downloadInfo.filename
         });
+
+        // Show notification for completed downloads using Electron's built-in Notification
+        if (state === 'completed') {
+            const notification = new Notification({
+                title: '下载完成',
+                body: `文件 "${downloadInfo.filename}" 已下载完成`,
+                icon: path.join(__dirname, 'assets', 'icon-2.png')
+            });
+            
+            notification.on('click', () => {
+                shell.showItemInFolder(downloadInfo.savePath);
+            });
+            
+            notification.show();
+        } else if (state === 'interrupted') {
+            const notification = new Notification({
+                title: '下载失败',
+                body: `文件 "${downloadInfo.filename}" 下载失败`,
+                icon: path.join(__dirname, 'assets', 'icon-2.png')
+            });
+            
+            notification.show();
+        }
 
         // Remove item reference after completion
         downloadInfo.item = null;
@@ -238,6 +283,115 @@ ipcMain.handle('window-close', (event) => {
     return false;
 });
 
+ipcMain.handle('window-toggle-fullscreen', (event) => {
+    const window = event.sender.getOwnerBrowserWindow();
+    if (window && !window.isDestroyed()) {
+        const isFullScreen = !window.isFullScreen();
+        window.setFullScreen(isFullScreen);
+        
+        // Notify renderer about fullscreen state change
+        event.sender.send('fullscreen-changed', isFullScreen);
+        
+        return true;
+    }
+    return false;
+});
+
+// ============================================
+// Password Manager with Windows Hello
+// ============================================
+const { exec } = require('child_process');
+const fs = require('fs');
+
+const passwordsPath = path.join(app.getPath('userData'), 'passwords.json');
+
+function loadPasswords() {
+    try {
+        if (fs.existsSync(passwordsPath)) {
+            const data = fs.readFileSync(passwordsPath, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (error) {
+        console.error('Error loading passwords:', error);
+    }
+    return [];
+}
+
+function savePasswords(passwords) {
+    try {
+        fs.writeFileSync(passwordsPath, JSON.stringify(passwords, null, 2), 'utf8');
+        return true;
+    } catch (error) {
+        console.error('Error saving passwords:', error);
+        return false;
+    }
+}
+
+ipcMain.handle('password-save', async (event, data) => {
+    try {
+        const passwords = loadPasswords();
+        
+        // Check if password already exists
+        const existingIndex = passwords.findIndex(p => p.site === data.site && p.username === data.username);
+        
+        if (existingIndex >= 0) {
+            passwords[existingIndex] = { ...passwords[existingIndex], ...data, updatedAt: new Date().toISOString() };
+        } else {
+            passwords.push({ ...data, id: Date.now(), createdAt: new Date().toISOString() });
+        }
+        
+        savePasswords(passwords);
+        return { success: true };
+    } catch (error) {
+        console.error('Error saving password:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('password-get-all', async (event) => {
+    try {
+        const passwords = loadPasswords();
+        return { success: true, passwords };
+    } catch (error) {
+        console.error('Error getting passwords:', error);
+        return { success: false, error: error.message, passwords: [] };
+    }
+});
+
+ipcMain.handle('password-delete', async (event, id) => {
+    try {
+        const passwords = loadPasswords();
+        const filteredPasswords = passwords.filter(p => p.id !== id);
+        savePasswords(filteredPasswords);
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting password:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('password-verify-hello', async (event) => {
+    try {
+        if (process.platform !== 'win32') {
+            return { success: false, error: 'Windows Hello is only available on Windows' };
+        }
+
+        return new Promise((resolve) => {
+            exec('powershell -Command "Add-Type -AssemblyName System.Runtime.WindowsRuntime; [Windows.Security.Credentials.UI.CredentialPicker,Windows.Security.Credentials.UI,ContentType=WindowsRuntime] | Out-Null"', (error) => {
+                if (error) {
+                    console.error('Windows Hello error:', error);
+                    resolve({ success: false, error: 'Windows Hello not available' });
+                } else {
+                    resolve({ success: true });
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error verifying with Windows Hello:', error);
+        return { success: false, error: error.message };
+    }
+});
+
 ipcMain.handle('webview-go-back', (event, webviewId) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
         return mainWindow.webContents.executeJavaScript(`
@@ -342,6 +496,59 @@ ipcMain.handle('webview-open-devtools', (event, webviewId) => {
     return false;
 });
 
+ipcMain.handle('webview-capture-page', async (event, webviewId) => {
+    return { success: false, error: 'Use captureScreenshot in renderer process instead' };
+});
+
+ipcMain.handle('file-save-image', async (event, { dataUrl, filename }) => {
+    try {
+        if (!dataUrl || typeof dataUrl !== 'string') {
+            console.error('[DEBUG main] Invalid data URL: must be a string');
+            return { success: false, error: 'Invalid data URL: must be a string' };
+        }
+
+        if (!filename || typeof filename !== 'string') {
+            console.error('[DEBUG main] Invalid filename: must be a string');
+            return { success: false, error: 'Invalid filename: must be a string' };
+        }
+
+        if (!dataUrl.startsWith('data:image/png;base64,')) {
+            console.error('[DEBUG main] Invalid data URL format: must be a PNG image');
+            return { success: false, error: 'Invalid data URL format: must be a PNG image' };
+        }
+
+        const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
+        console.log('[DEBUG main] base64Data length:', base64Data.length);
+        
+        if (base64Data.length === 0) {
+            console.error('[DEBUG main] Empty image data');
+            return { success: false, error: 'Empty image data' };
+        }
+
+        console.log('[DEBUG main] Decoding base64 to buffer...');
+        const buffer = Buffer.from(base64Data, 'base64');
+        console.log('[DEBUG main] Buffer created, size:', buffer.length);
+        
+        if (buffer.length === 0) {
+            console.error('[DEBUG main] Failed to decode image data');
+            return { success: false, error: 'Failed to decode image data' };
+        }
+        
+        const downloadsPath = app.getPath('downloads');
+        const filePath = path.join(downloadsPath, filename);
+        console.log('[DEBUG main] Saving to:', filePath);
+        
+        fs.writeFileSync(filePath, buffer);
+        console.log('[DEBUG main] File saved successfully');
+        
+        return { success: true, filePath };
+    } catch (error) {
+        console.error('[DEBUG main] Error saving image:', error);
+        console.error('[DEBUG main] Error stack:', error.stack);
+        return { success: false, error: error.message || 'Unknown error occurred' };
+    }
+});
+
 // ============================================
 // Incognito Mode
 // ============================================
@@ -354,8 +561,8 @@ function createIncognitoWindow() {
     const incognitoWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        title: 'Papstation - 隐私模式',
-        icon: path.join(__dirname, 'assets/icon.png'),
+        title: 'PaperStation - 隐私模式',
+        icon: path.join(__dirname, 'assets/icon-2.png'),
         frame: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -396,9 +603,165 @@ ipcMain.handle('open-incognito-window', () => {
 });
 
 // ============================================
+// Single Instance Lock
+// ============================================
+// Check if single instance lock is disabled via environment variable
+const singleInstanceLockDisabled = process.env['SINGLE_INSTANCE_LOCK'] === 'false' || 
+                                  process.env['single_instance_lock'] === 'false' || 
+                                  process.env['SingleInstanceLock'] === 'false';
+const singleInstanceLockEnabled = !singleInstanceLockDisabled;
+
+if (singleInstanceLockEnabled) {
+    // Request single instance lock
+    const gotTheLock = app.requestSingleInstanceLock();
+
+    if (!gotTheLock) {
+        // Another instance is already running, quit this one
+        app.quit();
+    } else {
+        // Listen for second instance attempts
+        app.on('second-instance', (event, commandLine, workingDirectory) => {
+            // Focus the existing window when a second instance is launched
+            if (mainWindow) {
+                if (mainWindow.isMinimized()) {
+                    mainWindow.restore();
+                }
+                mainWindow.focus();
+            }
+        });
+    }
+}
+
+// ============================================
 // App Lifecycle
 // ============================================
 app.whenReady().then(() => {
+    // Initialize context menu for browser functionality
+    contextMenu({
+        showSaveImageAs: true,
+        showInspectElement: false, // Disable default inspect to use our custom one
+        showCopyImageAddress: true,
+        showCopyLinkAddress: true,
+        showCopy: true,
+        showPaste: true,
+        showSelectAll: false, // Disable default select all to use our custom one
+        showSearchWithGoogle: true,
+        translations: {
+            copy: '复制',
+            paste: '粘贴',
+            cut: '剪切',
+            saveImageAs: '将图片另存为...',
+            copyImageAddress: '复制图片地址',
+            copyLinkAddress: '复制链接地址',
+            searchWithGoogle: '使用Google搜索',
+            selectAll: '全选',
+            inspectElement: '检查元素'
+        },
+        prepend: (params, browserWindow) => {
+            const menuItems = [];
+            
+            // Navigation buttons
+            menuItems.push(
+                {
+                    label: '后退',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        if (browserWindow.webContents.canGoBack()) {
+                            browserWindow.webContents.goBack();
+                        }
+                    }
+                },
+                {
+                    label: '前进',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        if (browserWindow.webContents.canGoForward()) {
+                            browserWindow.webContents.goForward();
+                        }
+                    }
+                },
+                {
+                    label: '刷新页面',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.reload();
+                    }
+                }
+            );
+            
+            // Separator
+            if (params.mediaType === 'none') {
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Link handling
+            if (params.linkURL && params.mediaType === 'none') {
+                menuItems.push(
+                    {
+                        label: '在新标签页中打开链接',
+                        click: () => {
+                            if (mainWindow && !mainWindow.isDestroyed()) {
+                                mainWindow.webContents.executeJavaScript(`
+                                    if (window.tabManager) {
+                                        window.tabManager.createTab('${params.linkURL}');
+                                    }
+                                `).catch(err => {
+                                    console.error('Failed to open link in new tab:', err);
+                                });
+                            }
+                        }
+                    }
+                );
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Page actions
+            menuItems.push(
+                {
+                    label: '另存为...',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.executeJavaScript(`
+                            if (window.tabManager) {
+                                const activeTab = window.tabManager.getActiveTab();
+                                if (activeTab) {
+                                    window.tabManager.savePage(activeTab.id);
+                                }
+                            }
+                        `).catch(err => {
+                            console.error('Failed to save page:', err);
+                        });
+                    }
+                },
+                {
+                    label: '检查',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.openDevTools();
+                    }
+                }
+            );
+            
+            // Separator
+            if (params.mediaType === 'none') {
+                menuItems.push({ type: 'separator' });
+            }
+            
+            // Select all
+            menuItems.push(
+                {
+                    label: '全选',
+                    visible: params.mediaType === 'none',
+                    click: () => {
+                        browserWindow.webContents.executeJavaScript('document.execCommand("selectAll")');
+                    }
+                }
+            );
+            
+            return menuItems;
+        }
+    });
+
     createWindow();
 
     // On macOS, re-create window when dock icon is clicked
@@ -426,7 +789,36 @@ app.on('web-contents-created', (event, contents) => {
     }
 
     contents.setWindowOpenHandler(({ url }) => {
-        // Could open in new tab instead
+        // Handle target="_blank" links by opening in new tab
+        if (url && url.startsWith('file://')) {
+            // For local file links (like error pages), open in new tab
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.executeJavaScript(`
+                    if (window.tabManager) {
+                        window.tabManager.createTab('${url}');
+                    }
+                `).catch(err => {
+                    console.error('Failed to open new tab:', err);
+                });
+            }
+            return { action: 'deny' };
+        }
+        
+        // For external URLs, open in new tab
+        if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.executeJavaScript(`
+                    if (window.tabManager) {
+                        window.tabManager.createTab('${url}');
+                    }
+                `).catch(err => {
+                    console.error('Failed to open new tab:', err);
+                });
+            }
+            return { action: 'deny' };
+        }
+        
+        // Deny other new window requests
         return { action: 'deny' };
     });
 });

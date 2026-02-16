@@ -1,5 +1,5 @@
 /**
- * Flowmora Browser - Renderer Script
+ * PaperStation Browser - Renderer Script
  * Full-featured browser engine with tabbed browsing,
  * webview management, and persistent sessions.
  */
@@ -29,11 +29,16 @@ const savedSettings = loadSavedSettings();
 const CONFIG = {
     get homePage() {
         const settings = loadSavedSettings();
+        console.log('[CONFIG.homePage] 加载设置:', settings);
+        console.log('[CONFIG.homePage] usePresetHomePage:', settings?.usePresetHomePage);
         if (settings && settings.usePresetHomePage) {
             const searchEngine = settings.searchEngine || 'bing';
-            return `./preset-home.html?searchEngine=${encodeURIComponent(searchEngine)}`;
+            const presetHomeUrl = `./preset-home.html?searchEngine=${encodeURIComponent(searchEngine)}`;
+            console.log('[CONFIG.homePage] 返回预设主页:', presetHomeUrl);
+            return presetHomeUrl;
         }
         if (settings && settings.homePage) {
+            console.log('[CONFIG.homePage] 返回自定义主页:', settings.homePage);
             return settings.homePage;
         }
         if (settings && settings.searchEngine) {
@@ -44,9 +49,13 @@ const CONFIG = {
                 yahoo: 'https://www.yahoo.com',
                 ecosia: 'https://www.ecosia.org'
             };
-            return engines[settings.searchEngine] || 'https://ruanmingze.github.io/ChickRubGo/';
+            const engineUrl = engines[settings.searchEngine] || 'https://ruanmingze.github.io/ChickRubGo/';
+            console.log('[CONFIG.homePage] 返回搜索引擎主页:', engineUrl);
+            return engineUrl;
         }
-        return 'https://ruanmingze.github.io/ChickRubGo/';
+        const defaultUrl = 'https://ruanmingze.github.io/ChickRubGo/';
+        console.log('[CONFIG.homePage] 返回默认主页:', defaultUrl);
+        return defaultUrl;
     },
     get searchEngine() {
         const settings = loadSavedSettings();
@@ -65,11 +74,198 @@ const CONFIG = {
     },
     defaultTitle: IS_INCOGNITO ? '隐私标签页' : '新标签页',
     // Incognito uses ephemeral partition (no persist: prefix = no storage)
-    partition: IS_INCOGNITO ? `incognito-${Date.now()}` : 'persist:focusflow',
+    partition: IS_INCOGNITO ? `incognito-${Date.now()}` : 'persist:paperstation',
     newTabPage: 'about:blank',
     isIncognito: IS_INCOGNITO
 };
 
+
+// ============================================
+// Custom Dialog Functions
+// ============================================
+class CustomDialog {
+    constructor() {
+        this.overlay = null;
+        this.currentResolve = null;
+        this.createOverlay();
+    }
+
+    createOverlay() {
+        if (document.getElementById('customDialogOverlay')) {
+            this.overlay = document.getElementById('customDialogOverlay');
+            return;
+        }
+
+        this.overlay = document.createElement('div');
+        this.overlay.id = 'customDialogOverlay';
+        this.overlay.className = 'custom-dialog-overlay';
+        document.body.appendChild(this.overlay);
+
+        this.overlay.addEventListener('click', (e) => {
+            if (e.target === this.overlay) {
+                this.close();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.overlay.classList.contains('open')) {
+                this.close();
+            }
+        });
+    }
+
+    show(content) {
+        return new Promise((resolve) => {
+            this.currentResolve = resolve;
+            this.overlay.innerHTML = content;
+            this.overlay.classList.add('open');
+        });
+    }
+
+    close(result = null) {
+        this.overlay.classList.remove('open');
+        if (this.currentResolve) {
+            this.currentResolve(result);
+            this.currentResolve = null;
+        }
+    }
+}
+
+const customDialog = new CustomDialog();
+
+function showAlert(message) {
+    return new Promise((resolve) => {
+        const content = `
+            <div class="custom-dialog">
+                <div class="custom-dialog-header">
+                    <div class="custom-dialog-title">
+                        <span class="custom-dialog-icon"><i class="fa-solid fa-info-circle"></i></span>
+                        <span>提示</span>
+                    </div>
+                </div>
+                <div class="custom-dialog-body">
+                    <p class="custom-dialog-message">${message}</p>
+                </div>
+                <div class="custom-dialog-footer">
+                    <button class="custom-dialog-btn custom-dialog-btn-primary" id="dialogOkBtn">确定</button>
+                </div>
+            </div>
+        `;
+
+        customDialog.show(content);
+
+        setTimeout(() => {
+            const okBtn = document.getElementById('dialogOkBtn');
+            if (okBtn) {
+                okBtn.addEventListener('click', () => {
+                    customDialog.close();
+                    resolve();
+                });
+                okBtn.focus();
+            }
+        }, 0);
+    });
+}
+
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        const content = `
+            <div class="custom-dialog">
+                <div class="custom-dialog-header">
+                    <div class="custom-dialog-title">
+                        <span class="custom-dialog-icon"><i class="fa-solid fa-question-circle"></i></span>
+                        <span>确认</span>
+                    </div>
+                </div>
+                <div class="custom-dialog-body">
+                    <p class="custom-dialog-message">${message}</p>
+                </div>
+                <div class="custom-dialog-footer">
+                    <button class="custom-dialog-btn custom-dialog-btn-secondary" id="dialogCancelBtn">取消</button>
+                    <button class="custom-dialog-btn custom-dialog-btn-primary" id="dialogOkBtn">确定</button>
+                </div>
+            </div>
+        `;
+
+        customDialog.show(content);
+
+        setTimeout(() => {
+            const okBtn = document.getElementById('dialogOkBtn');
+            const cancelBtn = document.getElementById('dialogCancelBtn');
+
+            if (okBtn) {
+                okBtn.addEventListener('click', () => {
+                    customDialog.close();
+                    resolve(true);
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    customDialog.close();
+                    resolve(false);
+                });
+                cancelBtn.focus();
+            }
+        }, 0);
+    });
+}
+
+function showPrompt(message, defaultValue = '') {
+    return new Promise((resolve) => {
+        const content = `
+            <div class="custom-dialog">
+                <div class="custom-dialog-header">
+                    <div class="custom-dialog-title">
+                        <span class="custom-dialog-icon"><i class="fa-solid fa-pencil-alt"></i></span>
+                        <span>输入</span>
+                    </div>
+                </div>
+                <div class="custom-dialog-body">
+                    <p class="custom-dialog-message">${message}</p>
+                    <input type="text" class="custom-dialog-input" id="dialogInput" value="${defaultValue}" />
+                </div>
+                <div class="custom-dialog-footer">
+                    <button class="custom-dialog-btn custom-dialog-btn-secondary" id="dialogCancelBtn">取消</button>
+                    <button class="custom-dialog-btn custom-dialog-btn-primary" id="dialogOkBtn">确定</button>
+                </div>
+            </div>
+        `;
+
+        customDialog.show(content);
+
+        setTimeout(() => {
+            const okBtn = document.getElementById('dialogOkBtn');
+            const cancelBtn = document.getElementById('dialogCancelBtn');
+            const input = document.getElementById('dialogInput');
+
+            if (okBtn) {
+                okBtn.addEventListener('click', () => {
+                    customDialog.close();
+                    resolve(input.value);
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    customDialog.close();
+                    resolve(null);
+                });
+            }
+
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        customDialog.close();
+                        resolve(input.value);
+                    }
+                });
+                input.focus();
+                input.select();
+            }
+        }, 0);
+    });
+}
 
 // ============================================
 // Tab Manager Class
@@ -93,6 +289,7 @@ class TabManager {
         this.forwardBtn = document.getElementById('forwardBtn');
         this.reloadBtn = document.getElementById('reloadBtn');
         this.homeBtn = document.getElementById('homeBtn');
+        this.screenshotBtn = document.getElementById('screenshotBtn');
         this.newTabBtn = document.getElementById('newTabBtn');
         this.bookmarkBtn = document.getElementById('bookmarkBtn');
         this.pwaInstallBtn = document.getElementById('pwaInstallBtn');
@@ -437,20 +634,28 @@ class TabManager {
                     .catch(() => { });
             }
             
+            // Set up beforeinstallprompt event listener
+            console.log('PWA: Setting up beforeinstallprompt listener in dom-ready');
+            webview.executeJavaScript(`
+                console.log('PWA: Setting up beforeinstallprompt listener');
+                if (!window.pwaListenerSetup) {
+                    window.addEventListener('beforeinstallprompt', (e) => {
+                        console.log('PWA: beforeinstallprompt event captured');
+                        e.preventDefault();
+                        window.deferredPrompt = e;
+                        console.log('PWA: deferredPrompt set:', !!window.deferredPrompt);
+                    });
+                    window.pwaListenerSetup = true;
+                    console.log('PWA: Listener setup complete');
+                } else {
+                    console.log('PWA: Listener already setup');
+                }
+            `).catch(err => {
+                console.error('PWA: Error setting up beforeinstallprompt listener:', err);
+            });
+            
             // Check for service worker and PWA capabilities
             this.checkPwaCapabilities(tabId, webview);
-            
-            // Capture beforeinstallprompt event for PWA installation
-            webview.executeJavaScript(`
-                // Capture beforeinstallprompt event
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    // Prevent Chrome 67 and earlier from automatically showing the prompt
-                    e.preventDefault();
-                    // Stash the event so it can be triggered later
-                    window.deferredPrompt = e;
-                });
-            `).catch(err => {
-            });
             
             // Handle target="_blank" links to open in new tabs
             webview.executeJavaScript(`
@@ -693,10 +898,12 @@ class TabManager {
     // ============================================
 
     navigate(input) {
+        console.log('[TabManager.navigate] 导航到:', input);
         let url = input.trim();
         
         // Use normalizeUrl directly to handle all cases correctly
         url = this.normalizeUrl(input);
+        console.log('[TabManager.navigate] 规范化后的URL:', url);
         
         const tab = this.tabs.get(this.activeTabId);
 
@@ -804,16 +1011,19 @@ class TabManager {
             if (result && result.hasServiceWorker && result.isInstallable) {
                 // Show PWA install button if this is the active tab
                 if (tabId === this.activeTabId && this.pwaInstallBtn) {
+                    console.log('PWA: Showing install button for tab', tabId);
                     this.pwaInstallBtn.style.display = 'flex';
                     
                     // Add click event listener for PWA install
                     this.pwaInstallBtn.onclick = () => {
+                        console.log('PWA: Install button clicked for tab', tabId);
                         this.installPWA(tabId, webview);
                     };
                 }
             } else {
                 // Hide PWA install button
                 if (this.pwaInstallBtn) {
+                    console.log('PWA: Hiding install button for tab', tabId);
                     this.pwaInstallBtn.style.display = 'none';
                 }
             }
@@ -832,34 +1042,146 @@ class TabManager {
     }
 
     installPWA(tabId, webview) {
-        if (!webview) return;
+        console.log('PWA: installPWA called for tab', tabId);
+        // Get the current active tab's webview
+        const activeWebview = webview || document.getElementById(`webview-${this.activeTabId}`);
+        console.log('PWA: Active webview found:', !!activeWebview);
+        if (!activeWebview) {
+            console.log('PWA: No active webview found');
+            return;
+        }
 
         // Trigger PWA installation
-        webview.executeJavaScript(`
-            (async function() {
-                // Check if beforeinstallprompt event is available
-                if (window.deferredPrompt) {
-                    // Show installation prompt
-                    window.deferredPrompt.prompt();
-                    
-                    // Wait for user to respond
-                    const choiceResult = await window.deferredPrompt.userChoice;
-                    // Clear the deferred prompt
-                    window.deferredPrompt = null;
-                    return choiceResult.outcome === 'accepted';
+        console.log('PWA: Executing JavaScript on webview');
+        
+        // First, check if deferredPrompt exists
+        activeWebview.executeJavaScript('!!window.deferredPrompt')
+            .then(hasDeferredPrompt => {
+                console.log('PWA: Has deferredPrompt:', hasDeferredPrompt);
+                
+                if (hasDeferredPrompt) {
+                    // Trigger the installation prompt
+                    return activeWebview.executeJavaScript(`
+                        (function() {
+                            console.log('PWA: Triggering install prompt');
+                            window.deferredPrompt.prompt();
+                            window.deferredPrompt.userChoice.then(function(choiceResult) {
+                                console.log('PWA: User choice:', choiceResult.outcome);
+                                window.deferredPrompt = null;
+                            });
+                            return true;
+                        })();
+                    `);
                 } else {
-                    return false;
+                    console.log('PWA: No deferredPrompt available');
+                    // Try to show a message to the user
+                    this.showNotification('PWA 无法安装', '由于技术限制，PWA安装功能暂时不可用');
+                    return Promise.resolve(false);
                 }
-            })();
-        `).then(installed => {
-            if (installed) {
-                this.setStatus('PWA 安装成功！');
-            } else {
-                this.setStatus('PWA 安装已取消');
+            })
+            .then(() => {
+                console.log('PWA: Installation prompt triggered');
+                this.setStatus('PWA 安装提示已显示');
+            })
+            .catch(err => {
+                console.error('PWA: Error triggering installation:', err);
+                this.setStatus('PWA 无法安装');
+                this.showNotification('PWA 无法安装', '由于技术限制，PWA安装功能暂时不可用');
+            });
+    }
+
+    async captureScreenshot() {
+        const tab = this.tabs.get(this.activeTabId);
+        if (!tab || !tab.webview) {
+            this.showNotification('截图失败', '没有找到活动标签页或webview');
+            return;
+        }
+
+        try {
+            const webview = tab.webview;
+            
+            if (typeof webview.capturePage !== 'function') {
+                throw new Error('Webview does not support capturePage method');
             }
-        }).catch(err => {
-            this.setStatus('PWA 安装失败');
-        });
+            
+            let image;
+            try {
+                image = await webview.capturePage();
+            } catch (e) {
+                throw new Error('Capture failed: ' + e.message);
+            }
+            
+            if (!image || typeof image.toDataURL !== 'function') {
+                throw new Error('Invalid image object');
+            }
+            
+            console.log('[DEBUG] Converting image to data URL...');
+            const dataUrl = image.toDataURL();
+            console.log('[DEBUG] Data URL generated, length:', dataUrl ? dataUrl.length : 0);
+            console.log('[DEBUG] Data URL prefix:', dataUrl ? dataUrl.substring(0, 50) : 'null');
+
+            console.log('[DEBUG] Data URL received, type:', typeof dataUrl);
+
+            if (!dataUrl || typeof dataUrl !== 'string') {
+                console.error('[DEBUG] Invalid data URL type');
+                throw new Error('Invalid data URL: must be a string');
+            }
+
+            if (!dataUrl.startsWith('data:image/png;base64,')) {
+                console.error('[DEBUG] Invalid data URL format');
+                throw new Error('Invalid data URL format: must be a PNG image');
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `screenshot-${timestamp}.png`;
+            console.log('[DEBUG] Filename generated:', filename);
+            
+            if (!window.focusFlowAPI || !window.focusFlowAPI.file || !window.focusFlowAPI.file.saveImage) {
+                console.error('[DEBUG] FocusFlow API not available');
+                throw new Error('FocusFlow API not available');
+            }
+
+            console.log('[DEBUG] Calling saveImage with dataUrl length:', dataUrl.length);
+            
+            const result = await window.focusFlowAPI.file.saveImage(dataUrl, filename);
+            
+            console.log('[DEBUG] saveImage result:', result);
+            
+            if (result && result.success) {
+                console.log('Screenshot saved to:', result.filePath);
+                this.showNotification('截图已保存', `文件已保存到: ${result.filePath}`);
+            } else {
+                console.error('Failed to save screenshot:', result.error);
+                this.showNotification('保存失败', result.error || '未知错误');
+            }
+        } catch (error) {
+            console.error('[DEBUG] Error in captureScreenshot:', error);
+            console.error('[DEBUG] Error stack:', error.stack);
+            this.showNotification('截图失败', error.message || '未知错误');
+        }
+    }
+
+    showNotification(title, message) {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-title">${title}</div>
+                <div class="notification-message">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 300);
+        }, 3000);
     }
 
     showWebviewContextMenu(e, tabId, webview) {
@@ -1073,6 +1395,7 @@ class TabManager {
         this.forwardBtn.addEventListener('click', () => this.goForward());
         this.reloadBtn.addEventListener('click', () => this.reload());
         this.homeBtn.addEventListener('click', () => this.goHome());
+        this.screenshotBtn.addEventListener('click', () => this.captureScreenshot());
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -2146,7 +2469,7 @@ class SummaryModalUI {
 // ============================================
 class KnowledgeDB {
     constructor() {
-        this.dbName = 'FlowmoraKnowledgeDB';
+        this.dbName = 'PaperStationKnowledgeDB';
         this.dbVersion = 1;
         this.storeName = 'knowledge';
         this.db = null;
@@ -2927,7 +3250,7 @@ class KnowledgePanelManager {
     async deleteCurrentEntry() {
         if (!this.currentEntry || !window.knowledgeDB) return;
 
-        if (!confirm('确定删除此知识条目？')) return;
+        if (!await showConfirm('确定删除此知识条目？')) return;
 
         try {
             await window.knowledgeDB.deleteKnowledgeEntry(this.currentEntry.id);
@@ -3098,7 +3421,7 @@ class KnowledgeBookExporter {
 
     async exportBook() {
         if (!window.knowledgeDB) {
-            alert('知识数据库不可用');
+            showAlert('知识数据库不可用');
             return;
         }
 
@@ -3113,7 +3436,7 @@ class KnowledgeBookExporter {
             const entries = await window.knowledgeDB.getAllKnowledge();
 
             if (entries.length === 0) {
-                alert('没有知识条目可导出。请先启用知识模式并浏览一些页面！');
+                showAlert('没有知识条目可导出。请先启用知识模式并浏览一些页面！');
                 return;
             }
 
@@ -3127,7 +3450,7 @@ class KnowledgeBookExporter {
             await this.downloadAsPDF(htmlContent);
 
         } catch (err) {
-            alert('导出失败：' + err.message);
+            showAlert('导出失败：' + err.message);
         } finally {
             // Re-enable button
             if (this.exportBtn) {
@@ -3492,7 +3815,7 @@ class KnowledgeBookExporter {
         <div class="book-icon">📚</div>
         <h1>My Knowledge Book</h1>
         <div class="subtitle">A Personal Collection of Learning & Insights</div>
-        <div class="meta">Generated by Flowmora Browser</div>
+        <div class="meta">Generated by PaperStation Browser</div>
         <div class="meta">${date}</div>
         <div class="stats">
             <div><strong>${totalEntries}</strong> pages collected</div>
@@ -3561,7 +3884,7 @@ class KnowledgeBookExporter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        alert('在此上下文中无法导出 PDF。已下载 HTML 文件，您可以打开它并打印为 PDF。');
+        showAlert('在此上下文中无法导出 PDF。已下载 HTML 文件，您可以打开它并打印为 PDF。');
     }
 }
 
@@ -3705,6 +4028,68 @@ class BookmarkManager {
             return true;
         }
         return false;
+    }
+
+    showFolderNamePrompt() {
+        const modal = document.createElement('div');
+        modal.id = 'folderNamePrompt';
+        modal.className = 'folder-name-prompt';
+        
+        modal.innerHTML = `
+            <div class="folder-prompt-content">
+                <h3>新建文件夹</h3>
+                <p>请输入文件夹名称：</p>
+                <input type="text" class="folder-name-input" id="folderNameInput" placeholder="文件夹名称" autofocus>
+                <div class="folder-prompt-actions">
+                    <button class="folder-prompt-btn cancel" id="cancelFolderPrompt">取消</button>
+                    <button class="folder-prompt-btn primary" id="confirmFolderPrompt">确定</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Focus the input
+        setTimeout(() => {
+            const input = document.getElementById('folderNameInput');
+            if (input) {
+                input.focus();
+            }
+        }, 100);
+        
+        // Confirm button
+        document.getElementById('confirmFolderPrompt')?.addEventListener('click', () => {
+            const input = document.getElementById('folderNameInput');
+            const name = input?.value.trim();
+            if (name) {
+                this.createFolder(name);
+            }
+            modal.remove();
+        });
+        
+        // Cancel button
+        document.getElementById('cancelFolderPrompt')?.addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        // Enter key
+        document.getElementById('folderNameInput')?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('folderNameInput');
+                const name = input?.value.trim();
+                if (name) {
+                    this.createFolder(name);
+                }
+                modal.remove();
+            }
+        });
+        
+        // Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('folderNamePrompt')) {
+                modal.remove();
+            }
+        });
     }
 
     isBookmarked(url) {
@@ -3884,7 +4269,7 @@ class BookmarkManager {
                 item.href = '#';
                 item.innerHTML = `
                     <span class="bookmark-favicon">
-                        ${bookmark.favicon ? `<img src="${bookmark.favicon}" alt=""/>` : '🌐'}
+                        ${bookmark.favicon ? `<img src="${bookmark.favicon}" alt=""/>` : '<img src="assets/" alt=""/>'}
                     </span>
                     <span>${bookmark.title}</span>
                 `;
@@ -3959,12 +4344,12 @@ class BookmarkManager {
         menu.style.top = `${e.clientY}px`;
         menu.style.left = `${e.clientX}px`;
 
-        menu.addEventListener('click', (evt) => {
+        menu.addEventListener('click', async (evt) => {
             const action = evt.target.dataset.action;
             if (action === 'delete') {
                 this.deleteFolder(folder.id);
             } else if (action === 'rename') {
-                const newName = prompt('文件夹名称：', folder.name);
+                const newName = await showPrompt('文件夹名称：', folder.name);
                 if (newName) {
                     folder.name = newName;
                     this.saveFolders();
@@ -3992,8 +4377,8 @@ class BookmarkManager {
         setTimeout(() => document.addEventListener('click', close), 0);
     }
 
-    editBookmark(bookmark) {
-        const newTitle = prompt('书签标题：', bookmark.title);
+    async editBookmark(bookmark) {
+        const newTitle = await showPrompt('书签标题：', bookmark.title);
         if (newTitle !== null) {
             bookmark.title = newTitle || bookmark.title;
             this.saveBookmarks();
@@ -4088,10 +4473,7 @@ class BookmarkManager {
             新建文件夹
         `;
         addFolderItem.addEventListener('click', () => {
-            const name = prompt('文件夹名称：');
-            if (name) {
-                this.createFolder(name);
-            }
+            this.showFolderNamePrompt();
             menu.remove();
         });
         menu.appendChild(addFolderItem);
@@ -4110,7 +4492,7 @@ class BookmarkManager {
                 item.className = 'context-menu-item';
                 item.innerHTML = `
                     <span class="bookmark-favicon" style="margin-right:8px;">
-                        ${bookmark.favicon ? `<img src="${bookmark.favicon}" style="width:14px;height:14px;"/>` : '🌐'}
+                        ${bookmark.favicon ? `<img src="${bookmark.favicon}" style="width:14px;height:14px;"/>` : '<img src="assets/" style="width:14px;height:14px;" alt=""/>'}
                     </span>
                     ${bookmark.title}
                 `;
@@ -4134,6 +4516,281 @@ class BookmarkManager {
         const divider = document.createElement('div');
         divider.className = 'context-menu-divider';
         return divider;
+    }
+}
+
+// ============================================
+// Password Manager Class
+// ============================================
+class PasswordManager {
+    constructor() {
+        this.passwords = [];
+        this.storageKey = 'paperstation-passwords';
+        this.isPanelOpen = false;
+        this.init();
+    }
+
+    init() {
+        this.loadPasswords();
+        this.setupEventListeners();
+    }
+
+    loadPasswords() {
+        try {
+            const stored = localStorage.getItem(this.storageKey);
+            if (stored) {
+                this.passwords = JSON.parse(stored);
+            }
+        } catch (error) {
+            console.error('Failed to load passwords:', error);
+            this.passwords = [];
+        }
+    }
+
+    savePasswords() {
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.passwords));
+        } catch (error) {
+            console.error('Failed to save passwords:', error);
+        }
+    }
+
+    async savePassword(data) {
+        try {
+            // Verify with Windows Hello if available
+            const verified = await window.focusFlowAPI.passwordManager.verifyWithHello();
+            if (!verified) {
+                return { success: false, error: 'Windows Hello verification failed' };
+            }
+
+            const password = {
+                id: Date.now(),
+                website: data.website,
+                username: data.username,
+                password: data.password,
+                updatedAt: new Date().toISOString()
+            };
+
+            this.passwords.push(password);
+            this.savePasswords();
+            this.renderPasswordsList();
+            
+            return { success: true, password };
+        } catch (error) {
+            console.error('Failed to save password:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    deletePassword(id) {
+        const index = this.passwords.findIndex(p => p.id === id);
+        if (index !== -1) {
+            this.passwords.splice(index, 1);
+            this.savePasswords();
+            this.renderPasswordsList();
+            return true;
+        }
+        return false;
+    }
+
+    getPasswords() {
+        return this.passwords;
+    }
+
+    showPasswordManager() {
+        if (this.isPanelOpen) return;
+
+        const panel = document.createElement('div');
+        panel.id = 'passwordManagerPanel';
+        panel.className = 'password-manager-panel';
+        
+        panel.innerHTML = `
+            <div class="password-manager-header">
+                <h2>🔐 密码管理器</h2>
+                <button class="password-manager-close" id="passwordManagerClose" style="color: #ffffff; font-size: 16px; padding: 8px 12px; background: #333; border-radius: 6px;">
+                    &times;
+                </button>
+            </div>
+            <div class="password-manager-body">
+                <div class="password-manager-actions">
+                    <button class="password-manager-btn primary" id="addPasswordBtn">
+                        添加密码
+                    </button>
+                </div>
+                <div class="passwords-list" id="passwordsList">
+                    ${this.renderPasswordsList()}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(panel);
+        this.isPanelOpen = true;
+        this.setupPanelEventListeners();
+    }
+
+    renderPasswordsList() {
+        if (this.passwords.length === 0) {
+            return `
+                <div class="passwords-empty">
+                    <p>还没有保存的密码</p>
+                    <p>点击"添加密码"按钮开始管理您的密码</p>
+                </div>
+            `;
+        }
+        
+        return this.passwords.map(password => `
+            <div class="password-item">
+                <div class="password-item-info">
+                    <h3>${password.website}</h3>
+                    <p>用户名: ${password.username}</p>
+                    <p class="password-updated">更新时间: ${new Date(password.updatedAt).toLocaleString()}</p>
+                </div>
+                <div class="password-item-actions">
+                    <button class="password-action-btn copy" data-id="${password.id}" title="复制密码">
+                        📋
+                    </button>
+                    <button class="password-action-btn delete" data-id="${password.id}" title="删除密码">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    setupPanelEventListeners() {
+        // Close button
+        document.getElementById('passwordManagerClose')?.addEventListener('click', () => {
+            this.hidePasswordManager();
+        });
+        
+        // Add password button
+        document.getElementById('addPasswordBtn')?.addEventListener('click', () => {
+            this.showAddPasswordModal();
+        });
+        
+        // Copy password buttons
+        document.querySelectorAll('.password-action-btn.copy').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = parseInt(e.currentTarget.dataset.id);
+                const password = this.passwords.find(p => p.id === id);
+                if (password) {
+                    navigator.clipboard.writeText(password.password).then(() => {
+                        showAlert('密码已复制到剪贴板');
+                    });
+                }
+            });
+        });
+        
+        // Delete password buttons
+        document.querySelectorAll('.password-action-btn.delete').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = parseInt(e.currentTarget.dataset.id);
+                if (await showConfirm('确定要删除这个密码吗？')) {
+                    this.deletePassword(id);
+                }
+            });
+        });
+        
+        // Escape key to close
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isPanelOpen) {
+                this.hidePasswordManager();
+            }
+        });
+    }
+
+    showAddPasswordModal() {
+        const modal = document.createElement('div');
+        modal.id = 'addPasswordModal';
+        modal.className = 'password-modal';
+        
+        modal.innerHTML = `
+            <div class="password-modal-content">
+                <h3>添加新密码</h3>
+                <form id="addPasswordForm">
+                    <div class="password-form-group">
+                        <label for="website">网站</label>
+                        <input type="url" id="website" placeholder="https://example.com" required>
+                    </div>
+                    <div class="password-form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" id="username" placeholder="用户名或邮箱" required>
+                    </div>
+                    <div class="password-form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" placeholder="输入密码" required>
+                    </div>
+                    <div class="password-form-actions">
+                        <button type="button" class="password-btn cancel" id="cancelAddPassword">取消</button>
+                        <button type="submit" class="password-btn primary">保存密码</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Focus the input
+        setTimeout(() => {
+            const input = document.getElementById('website');
+            if (input) {
+                input.focus();
+            }
+        }, 100);
+        
+        // Form submit
+        document.getElementById('addPasswordForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const website = document.getElementById('website').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await this.savePassword({ website, username, password });
+            if (result.success) {
+                showAlert('密码保存成功！');
+                modal.remove();
+            } else {
+                showAlert('保存失败：' + result.error);
+            }
+        });
+        
+        // Cancel button
+        const cancelBtn = document.getElementById('cancelAddPassword');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                modal.remove();
+            });
+        }
+        
+        // Escape key
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        };
+        document.addEventListener('keydown', escapeHandler);
+        
+        // Click outside to close
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                document.removeEventListener('keydown', escapeHandler);
+            }
+        });
+    }
+
+    hidePasswordManager() {
+        const panel = document.getElementById('passwordManagerPanel');
+        if (panel) {
+            panel.remove();
+        }
+        this.isPanelOpen = false;
+    }
+
+    setupEventListeners() {
+        // Global event listeners if needed
     }
 }
 
@@ -4351,14 +5008,14 @@ class HistoryManager {
         });
 
         // Clear button
-        panel.querySelector('#clearHistoryBtn').addEventListener('click', () => {
+        panel.querySelector('#clearHistoryBtn').addEventListener('click', async () => {
             const activeTab = panel.querySelector('.history-tab.active').dataset.tab;
             if (activeTab === 'history') {
-                if (confirm('确定清除所有浏览历史？')) {
+                if (await showConfirm('确定清除所有浏览历史？')) {
                     this.clearHistory();
                 }
             } else {
-                if (confirm('确定清除所有最近关闭的标签页？')) {
+                if (await showConfirm('确定清除所有最近关闭的标签页？')) {
                     this.clearClosedTabs();
                 }
             }
@@ -4448,7 +5105,7 @@ class HistoryManager {
 
         entry.innerHTML = `
             <span class="history-entry-favicon">
-                ${item.favicon ? `<img src="${item.favicon}" alt=""/>` : '🌐'}
+                ${item.favicon ? `<img src="${item.favicon}" alt=""/>` : '<img src="assets/" alt=""/>'}
             </span>
             <div class="history-entry-info">
                 <span class="history-entry-title">${item.title}</span>
@@ -4487,7 +5144,7 @@ class HistoryManager {
 
         entry.innerHTML = `
             <span class="history-entry-favicon">
-                ${item.favicon ? `<img src="${item.favicon}" alt=""/>` : '🌐'}
+                ${item.favicon ? `<img src="${item.favicon}" alt=""/>` : '<img src="assets/" alt=""/>'}
             </span>
             <div class="history-entry-info">
                 <span class="history-entry-title">${item.title}</span>
@@ -5132,7 +5789,7 @@ class MainMenuManager {
                         } catch (err) {
                         }
                     } else {
-                        alert('历史记录不可用 - historyManager 未初始化');
+                        showAlert('历史记录不可用 - historyManager 未初始化');
                     }
                 } else if (itemId === 'menuKnowledge') {
                     if (window.knowledgePanelManager) {
@@ -5149,12 +5806,12 @@ class MainMenuManager {
                         } catch (err) {
                         }
                     } else {
-                        alert('设置不可用 - settingsManager 未初始化');
+                        showAlert('设置不可用 - settingsManager 未初始化');
                     }
                 } else if (itemId === 'menuSummarize') {
                     // Check if Knowledge Mode is ON
                     if (!window.knowledgeManager || !window.knowledgeManager.isKnowledgeModeEnabled()) {
-                        alert('请启用知识模式以进行总结。');
+                        showAlert('请启用知识模式以进行总结。');
                         return;
                     }
                     // Trigger summarization
@@ -5186,14 +5843,14 @@ class MainMenuManager {
                                         const summaryResult = window.ruleSummarizer.summarize(pageContent);
                                         window.summaryModalUI.showSummaryModal(summaryResult);
                                     } else {
-                                        alert('此页面没有找到内容可总结。');
+                                        showAlert('此页面没有找到内容可总结。');
                                     }
                                 })
                                 .catch(err => {
-                                    alert('无法从此页面提取内容。');
+                                    showAlert('无法从此页面提取内容。');
                                 });
                         } else {
-                            alert('Navigate to a page first to summarize its content.');
+                            showAlert('Navigate to a page first to summarize its content.');
                         }
                     }
                 } else if (itemId === 'menuExportPDF') {
@@ -5202,13 +5859,13 @@ class MainMenuManager {
                     } else if (window.knowledgeDB) {
                         window.knowledgeDB.getAllEntries().then(entries => {
                             if (!entries || entries.length === 0) {
-                                alert('未找到知识条目。请先启用知识模式并浏览一些页面！');
+                                showAlert('未找到知识条目。请先启用知识模式并浏览一些页面！');
                             } else {
-                                alert('知识库导出准备就绪！找到 ' + entries.length + ' 个条目。');
+                                showAlert('知识库导出准备就绪！找到 ' + entries.length + ' 个条目。');
                             }
                         });
                     } else {
-                        alert('知识系统未就绪。');
+                        showAlert('知识系统未就绪。');
                     }
                 } else if (itemId === 'menuDevTools') {
                     if (window.tabManager) {
@@ -5217,13 +5874,13 @@ class MainMenuManager {
                             try {
                                 activeTab.webview.openDevTools();
                             } catch (err) {
-                                alert('无法打开开发者工具：' + err.message);
+                                showAlert('无法打开开发者工具：' + err.message);
                             }
                         } else {
-                            alert('没有活动标签页可打开开发者工具。');
+                            showAlert('没有活动标签页可打开开发者工具。');
                         }
                     } else {
-                        alert('标签管理器未初始化。');
+                        showAlert('标签管理器未初始化。');
                     }
                 } else {
                 }
@@ -5308,7 +5965,7 @@ function setupIncognitoMode() {
     }
 
     // Update window title
-    document.title = 'Flowmora Browser - Incognito';
+    document.title = 'PaperStation - 隐私模式';
 }
 
 // ============================================
@@ -5592,6 +6249,7 @@ class SettingsManager {
     }
 
     setSetting(key, value) {
+        console.log('[SettingsManager.setSetting] 设置:', key, '=', value);
         this.settings[key] = value;
         this.saveSettings();
         this.applySettings();
@@ -5675,6 +6333,10 @@ class SettingsManager {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         安全
                     </button>
+                    <button class="settings-nav-item" data-section="passwords">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                        密码管理器
+                    </button>
                     <button class="settings-nav-item" data-section="shortcuts">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="10" y2="16"/></svg>
                         快捷键
@@ -5709,6 +6371,7 @@ class SettingsManager {
             appearance: this.renderAppearanceSection(),
             performance: this.renderPerformanceSection(),
             security: this.renderSecuritySection(),
+            passwords: this.renderPasswordsSection(),
             shortcuts: this.renderShortcutsSection()
         };
 
@@ -5941,6 +6604,31 @@ class SettingsManager {
         `;
     }
 
+    renderPasswordsSection() {
+        return `
+            <div class="settings-section">
+                <h3 class="settings-section-title">🔐 密码管理器</h3>
+                <p class="settings-section-desc">管理您的网站密码，集成 Windows Hello 生物识别。</p>
+                
+                <div class="password-manager-actions" style="margin: 20px 0;">
+                    <button class="settings-btn primary full-width" id="openPasswordManager">
+                        打开密码管理器
+                    </button>
+                </div>
+                
+                <div class="settings-info-box">
+                    <h4>功能说明</h4>
+                    <ul style="margin: 10px 0 0 20px; text-align: left;">
+                        <li>添加、查看、复制、删除密码</li>
+                        <li>集成 Windows Hello 生物识别验证</li>
+                        <li>密码安全存储在本地</li>
+                        <li>支持网站、用户名、密码管理</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+
     formatShortcutName(key) {
         const names = {
             newTab: 'New Tab',
@@ -6066,41 +6754,41 @@ class SettingsManager {
         });
 
         // Clear data buttons
-        document.getElementById('clearHistory')?.addEventListener('click', () => {
-            if (confirm('确定清除所有浏览历史？')) {
+        document.getElementById('clearHistory')?.addEventListener('click', async () => {
+            if (await showConfirm('确定清除所有浏览历史？')) {
                 localStorage.removeItem('focusflow-history');
                 if (window.historyManager) window.historyManager.history = [];
-                alert('历史记录已清除！');
+                showAlert('历史记录已清除！');
             }
         });
 
-        document.getElementById('clearCache')?.addEventListener('click', () => {
-            if (confirm('确定清除缓存？（在 Web 中不完全支持）')) {
-                alert('已请求清除缓存。');
+        document.getElementById('clearCache')?.addEventListener('click', async () => {
+            if (await showConfirm('确定清除缓存？（在 Web 中不完全支持）')) {
+                showAlert('已请求清除缓存。');
             }
         });
 
-        document.getElementById('clearCookies')?.addEventListener('click', () => {
-            if (confirm('确定清除 Cookie？（在 Web 中不完全支持）')) {
-                alert('已请求清除 Cookie。');
+        document.getElementById('clearCookies')?.addEventListener('click', async () => {
+            if (await showConfirm('确定清除 Cookie？（在 Web 中不完全支持）')) {
+                showAlert('已请求清除 Cookie。');
             }
         });
 
-        document.getElementById('clearAllData')?.addEventListener('click', () => {
-            if (confirm('确定清除所有浏览数据，包括历史记录、缓存和 Cookie？')) {
+        document.getElementById('clearAllData')?.addEventListener('click', async () => {
+            if (await showConfirm('确定清除所有浏览数据，包括历史记录、缓存和 Cookie？')) {
                 localStorage.removeItem('focusflow-history');
                 localStorage.removeItem('focusflow-closed-tabs');
                 if (window.historyManager) {
                     window.historyManager.history = [];
                     window.historyManager.recentlyClosed = [];
                 }
-                alert('所有浏览数据已清除！');
+                showAlert('所有浏览数据已清除！');
             }
         });
 
         // Clear All Knowledge Data
         document.getElementById('clearAllKnowledge')?.addEventListener('click', async () => {
-            if (confirm('⚠️ 删除所有知识数据？\n\n这将：\n• 删除所有存储的知识条目\n• 关闭知识模式\n• 此操作无法撤销！')) {
+            if (await showConfirm('⚠️ 删除所有知识数据？\n\n这将：\n• 删除所有存储的知识条目\n• 关闭知识模式\n• 此操作无法撤销！')) {
                 try {
                     // Clear IndexedDB
                     if (window.knowledgeDB) {
@@ -6115,10 +6803,19 @@ class SettingsManager {
                     // Re-render the privacy section to update status
                     this.renderSection('privacy');
 
-                    alert('✅ 所有知识数据已清除。\n知识模式已关闭。');
+                    showAlert('✅ 所有知识数据已清除。\n知识模式已关闭。');
                 } catch (err) {
-                    alert('清除知识数据失败：' + err.message);
+                    showAlert('清除知识数据失败：' + err.message);
                 }
+            }
+        });
+
+        // Open Password Manager
+        document.getElementById('openPasswordManager')?.addEventListener('click', () => {
+            if (window.passwordManager) {
+                window.passwordManager.showPasswordManager();
+            } else {
+                showAlert('密码管理器不可用 - passwordManager 未初始化');
             }
         });
     }
@@ -6247,6 +6944,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {
         }
 
+        try {
+            const pm = new PasswordManager();
+            window.passwordManager = pm;
+        } catch (e) {
+        }
 
         // Update bookmark star when tab changes
         const originalActivateTab = window.tabManager.activateTab.bind(window.tabManager);
@@ -6288,6 +6990,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (downloadsBtn) {
         // Using DownloadManager's built-in listener
     }
+
+    // Setup fullscreen change listener
+    window.focusFlowAPI.onMessage('fullscreen-changed', (isFullScreen) => {
+        if (isFullScreen) {
+            document.body.classList.add('fullscreen');
+        } else {
+            document.body.classList.remove('fullscreen');
+        }
+    });
 
 
     // ============================================
@@ -6339,25 +7050,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Check if Knowledge Mode is ON
             if (!window.knowledgeManager || !window.knowledgeManager.isKnowledgeModeEnabled()) {
-                alert('Enable Knowledge Mode to summarize.');
+                showAlert('Enable Knowledge Mode to summarize.');
                 return;
             }
 
             // Get the current active tab's webview
             if (!window.tabManager || !window.tabManager.activeTabId) {
-                alert('No active page to summarize.');
+                showAlert('No active page to summarize.');
                 return;
             }
 
             const activeTab = window.tabManager.tabs.get(window.tabManager.activeTabId);
             if (!activeTab || !activeTab.webview) {
-                alert('No active page to summarize.');
+                showAlert('No active page to summarize.');
                 return;
             }
 
             // Check if the page is about:blank
             if (!activeTab.url || activeTab.url === 'about:blank') {
-                alert('Navigate to a page first to summarize its content.');
+                showAlert('Navigate to a page first to summarize its content.');
                 return;
             }
 
@@ -6386,7 +7097,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pageContent = await activeTab.webview.executeJavaScript(extractionScript);
 
                 if (!pageContent || (!pageContent.paragraphs.length && !pageContent.lists.length)) {
-                    alert('No content found on this page to summarize.');
+                    showAlert('No content found on this page to summarize.');
                     return;
                 }
                 // Generate the summary using rule-based summarizer
@@ -6395,7 +7106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.summaryModalUI.showSummaryModal(summaryResult);
 
             } catch (err) {
-                alert('Failed to extract content from this page.');
+                showAlert('Failed to extract content from this page.');
             }
         });
     } else {
@@ -6411,7 +7122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Check if Knowledge Mode has any entries
             if (!window.knowledgeDB) {
-                alert('Knowledge system is not ready. Please try again.');
+                showAlert('Knowledge system is not ready. Please try again.');
                 return;
             }
 
@@ -6419,7 +7130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const entries = await window.knowledgeDB.getAllEntries();
 
                 if (!entries || entries.length === 0) {
-                    alert('No knowledge entries found. Browse some pages with Knowledge Mode ON first!');
+                    showAlert('No knowledge entries found. Browse some pages with Knowledge Mode ON first!');
                     return;
                 }
 
@@ -6432,7 +7143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     downloadAsHTML(bookContent, 'Flowmora-Knowledge-Book.html');
                 }
             } catch (err) {
-                alert('Failed to export Knowledge Book. Please try again.');
+                showAlert('Failed to export Knowledge Book. Please try again.');
             }
         });
     } else {

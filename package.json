@@ -1,34 +1,52 @@
 {
-  "name": "papstation-browser",
-  "version": "1.0.0",
+  "name": "paperstation-browser",
+  "version": "1.1.6",
   "description": "访问互联网",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "set NODE_ENV=development && electron .",
+    "start": "node start.js",
+    "start-no-slc": "cross-env SINGLE_INSTANCE_LOCK=false node start.js",
+    "dev": "cross-env NODE_ENV=development node start.js",
     "build": "electron-builder --win --x64",
-    "build:dir": "electron-builder --win --x64 --dir",
+    "build:all": "electron-builder --win --mac --linux",
     "dist": "electron-builder --win --x64 --publish never",
     "pack": "electron-builder --dir"
   },
   "build": {
-    "appId": "com.papstation.browser",
-    "productName": "Papstation",
+    "appId": "com.paperstation.browser",
+    "productName": "PaperStation",
     "copyright": "Copyright © 2026 Ruanm",
     "directories": {
-      "output": "dist",
-      "buildResources": "assets"
+      "output": "dist"
     },
     "files": [
       "**/*",
-      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
-      "!node_modules/.bin",
-      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
-      "!.git",
-      "!*.md",
-      "!LICENSE",
-      "!dist"
+      "!intro/**/*",
+      "!intro",
+      "!intro/.github/**/*",
+      "!intro/app/**/*",
+      "!intro/components/**/*",
+      "!intro/hooks/**/*",
+      "!intro/lib/**/*",
+      "!intro/locales/**/*",
+      "!intro/public/**/*",
+      "!intro/styles/**/*",
+      "!intro/.gitignore",
+      "!intro/.hintrc",
+      "!intro/IMAGE_GENERATION_README.md",
+      "!intro/README.md",
+      "!intro/components.json",
+      "!intro/middleware.ts",
+      "!intro/next-env.d.ts",
+      "!intro/next.config.mjs",
+      "!intro/package.json",
+      "!intro/pnpm-lock.yaml",
+      "!intro/postcss.config.mjs",
+      "!intro/tailwind.config.ts",
+      "!intro/tsconfig.json",
+      "!intro/tsconfig.tsbuildinfo",
+      "!intro/turbopack-build-error.log",
+      "!*-builder.zip"
     ],
     "win": {
       "target": [
@@ -45,7 +63,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.png",
+      "icon": "assets/icon-2.png",
       "artifactName": "${productName}_Win64_${version}.${ext}"
     },
     "nsis": {
@@ -55,7 +73,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Papstation"
+      "shortcutName": "PaperStation"
     },
     "asar": true,
     "compression": "maximum"
@@ -64,15 +82,19 @@
     "browser",
     "electron",
     "chromium",
-    "papstation"
+    "paperstation"
   ],
   "author": "RuanMingze",
   "license": "MIT",
   "dependencies": {
+    "electron-context-menu": "^4.1.1",
+    "electron-notifications": "1.0.0",
     "electron-squirrel-startup": "^1.0.0"
   },
   "devDependencies": {
-    "electron": "^40.1.0",
-    "electron-builder": "^25.1.8"
+    "cross-env": "^7.0.3",
+    "electron": "^40.2.1",
+    "electron-builder": "^25.1.8",
+    "figlet": "1.7.0"
   }
 }
